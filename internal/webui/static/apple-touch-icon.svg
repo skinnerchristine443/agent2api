@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="180" height="180" fill="none" role="img" aria-label="agent2api">
+  <title>agent2api</title>
+  <rect width="128" height="128" rx="28.80" fill="#18181B"/>
+  <path pathLength="100" fill="none" stroke="#FCFCFC" stroke-width="11.4" stroke-linecap="round" stroke-linejoin="round" d="M 30 64 L 40 64 M 64 40 L 40 64 L 64 88"/>
+  <path pathLength="100" fill="none" stroke="#22D3EE" stroke-width="11.4" stroke-linecap="round" stroke-linejoin="round" d="M 88 64 L 98 64 M 64 40 L 88 64 L 64 88"/>
+</svg>

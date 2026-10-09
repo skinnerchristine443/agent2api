@@ -1,0 +1,73 @@
+services:
+  agent2api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: "${AGENT2API_IMAGE:-ghcr.io/skinnerchristine443/agent2api:latest}"
+    container_name: agent2api
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "3010"
+      AGENT2API_DATA_DIR: "/data"
+      AGENT2API_RUNTIME_DIR: "/run/agent2api"
+      # console 面（/api/*）只接受来自回环来源的请求。容器内，
+      # 宿主机的连接来自 Docker 网桥网关（而非 127.0.0.1），
+      # 因此这里必须列出网桥网段。这本身不会扩大暴露面：
+      # 下面的端口只发布到宿主机回环，容器外无法触达。
+      # 若你将来把端口发布到 0.0.0.0，请收窄或清空该值。
+      # （以 userland-proxy=false 运行时来源会变成 127.0.0.1，
+      # 此时该值可留空。）
+      AGENT2API_CONSOLE_ALLOWED_CIDRS: "${AGENT2API_CONSOLE_ALLOWED_CIDRS:-172.16.0.0/12}"
+      AGENT2API_PROXY_URL: "${AGENT2API_PROXY_URL:-}"
+      AGENT2API_MAX_RETRY_ACCOUNTS: "${AGENT2API_MAX_RETRY_ACCOUNTS:-}"
+      AGENT2API_ENABLE_PPROF: "${AGENT2API_ENABLE_PPROF:-}"
+      # 数据面（/v1/*）CORS 来源白名单（D-2）：留空 = 通配 *；
+      # 填写后仅白名单来源可跨域调用（逗号/空格分隔）。
+      AGENT2API_CORS_ORIGINS: "${AGENT2API_CORS_ORIGINS:-}"
+      AGENT2API_UPDATE_SOCKET_PATH: "/run/agent2api-updater/updater.sock"
+      AGENT2API_UPDATE_AGENT_URL: "${AGENT2API_UPDATE_AGENT_URL:-}"
+      AGENT2API_UPDATE_AGENT_TOKEN: "${AGENT2API_UPDATE_AGENT_TOKEN:-}"
+      AGENT2API_UPDATE_GITHUB_TOKEN: "${AGENT2API_UPDATE_GITHUB_TOKEN:-}"
+    volumes:
+      # 升级注记（非 root 运行）：镜像自本版本起以 UID/GID 10001 运行。
+      # 从旧版本（root）升级时，既有命名卷的属主可能仍是 root，需一次性修正：
+      #   docker compose run --rm --user root agent2api chown -R 10001:10001 /data
+      - agent2api-data:/data
+      - "${AGENT2API_UPDATER_SOCKET_DIR:-/tmp/agent2api-updater}:/run/agent2api-updater:ro"
+    # 非 root 运行：容器用户附加到 gid 0 组，以访问宿主机更新器
+    # socket（root:root 0660、父目录 0750——组 root 拥有 r-x/rw）。
+    # 只影响容器内进程的组权限，不改动宿主任何权限；如宿主按独立组
+    # 隔离 socket，把该组的数字 gid 配到 AGENT2API_UPDATER_GID 即可。
+    group_add:
+      - "${AGENT2API_UPDATER_GID:-0}"
+    tmpfs:
+      - /run/agent2api:mode=0700,uid=10001,gid=10001
+    ports:
+      - "127.0.0.1:3010:3010"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3010/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+    # 日志轮转上限：Docker 默认的 json-file 驱动不做任何轮转（官方文档
+    # 警告可能耗尽磁盘）。首启的代理/运维密钥在非终端环境不再进入容器
+    # 日志（改写入 /data/initial-keys.txt，0600；scripts/start.sh 会读取），
+    # 此处继续限制其余运行日志的驻留窗口。
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # 优雅停机：给长 SSE 流与关闭排空留出窗口（应用侧先 10s drain 再关库；
+    # 默认 10s 会在慢请求上截断）。
+    stop_grace_period: 30s
+    # 资源限制（内存安全网）：默认 1g，远高于实测基线（控制台「资源」
+    # 面板 RSS 为百 MB 量级），用于防止突发（大上下文请求）被宿主 OOM
+    # 波及；按宿主机规格观察基线后可自行收紧或放宽。
+    mem_limit: "1g"
+    memswap_limit: "1g"
+
+volumes:
+  agent2api-data:

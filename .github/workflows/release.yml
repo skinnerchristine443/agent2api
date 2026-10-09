@@ -1,0 +1,58 @@
+name: release
+
+# 发布流水线（T7）：打 tag（v*）即产出三件套——GHCR 容器镜像 + 发行资产 + GitHub Release。
+# 发行资产命名契约由 scripts/build-updater-assets.sh 单点维护（安装器
+# deploy/install-updater.sh 与容器内更新器按同名消费）；首次发布后资产名冻结。
+# 注意：发布必须是正式版（非 prerelease），否则 releases/latest 不会指向它，
+# 安装器的 latest 回退路径会失效。
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # 创建 Release 与上传资产
+  packages: write # 推送 GHCR 镜像
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # 1) 发行资产：updater 四平台二进制 + agent2api-updater_checksums.txt
+      - name: build updater assets
+        env:
+          APP_VERSION: ${{ github.ref_name }}
+          APP_COMMIT: ${{ github.sha }}
+        run: ./scripts/build-updater-assets.sh dist/updater
+
+      # 2) 容器镜像推 GHCR：多平台 amd64 + arm64。我们的 Dockerfile 把全部
+      #    编译 stage 固定在 BUILDPLATFORM（原生 amd64）上、仅运行时层跟随
+      #    目标架构（Go 交叉编译），因此多平台不涉模拟编译；QEMU 仅用于
+      #    运行时层的 apt 执行。
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - name: build and push image
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --build-arg APP_VERSION="${{ github.ref_name }}" \
+            --build-arg APP_COMMIT="${{ github.sha }}" \
+            -f deploy/Dockerfile \
+            -t "${IMAGE}:${{ github.ref_name }}" \
+            -t "${IMAGE}:latest" \
+            --push \
+            .
+
+      # 3) GitHub Release（附全部资产；正式版 → releases/latest 可发现）
+      - name: create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${{ github.ref_name }}" dist/updater/* --title "${{ github.ref_name }}" --generate-notes

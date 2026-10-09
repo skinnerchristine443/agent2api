@@ -1,0 +1,1117 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+
+/* Self-hosted webfonts (latin subsets). No font CDN: the console must work
+   offline / on an intranet. Paths are relative to this file so Vite emits the
+   files into /assets with a content hash. CJK is not covered here — it falls
+   through to the system stack declared in --font-sans. */
+@font-face {
+  font-family: "Outfit";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/outfit-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Outfit";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./assets/fonts/outfit-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Outfit";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./assets/fonts/outfit-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Outfit";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./assets/fonts/outfit-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./assets/fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+}
+
+@theme {
+  --font-sans: "Outfit", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+
+  /* 备注：拉丁字体暂沿用 Outfit（Inter 为设计建议、实施时另评；令牌栈留位）。
+     11px micro labels / 13px table + caption text。 */
+  --text-micro: 11px;
+  --text-caption: 13px;
+  /* 28px 英雄数字（设计阶梯新增档） */
+  --text-display: 28px;
+
+  /* 设计令牌 → Tailwind 实用类（重构批次 1）：
+     供迁移页面直接使用 bg-ink / text-secondary / bg-surface-sunken 等；
+     数值引用 :root 设计令牌（浅色单主题）。 */
+  --color-ink: var(--ink);
+  --color-signal: var(--signal);
+  --color-signal-soft: var(--signal-soft);
+  --color-signal-border: var(--signal-border);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-hover: var(--surface-hover);
+  --color-secondary: var(--text-secondary);
+  --color-tertiary: var(--text-tertiary);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-success-fg: var(--success-fg);
+  --color-danger-fg: var(--danger-fg);
+  --color-warning-fg: var(--warning-fg);
+}
+
+/* ============================================================================
+   设计令牌层 v2（重构批次 1 · 2026-10-08 · 方向 A「精密工程」）
+   **浅色单主题**（批次 5 收口删除暗色档与主题切换，D2 兑现）。
+   HeroUI 适配要点：
+   · --accent 保持「主填充」语义 = 墨（主按钮 / 开关保持深色，与原型一致）；
+   · 信号靛蓝只进 --accent-soft* / --focus / --link / --segment（选择态、焦点、链接）。
+   ============================================================================ */
+:root {
+  color-scheme: light;
+  /* —— 设计令牌 · 浅色 —— */
+  --bg: #f5f6f7;
+  --surface-raised: #ffffff;
+  --surface-sunken: #edeef1;
+  --surface-hover: #f4f5f7;
+
+  --text: #16171a;
+  --text-secondary: #565a63;
+  --text-tertiary: #6e737d;
+  --text-disabled: #a8adb6;
+  --text-on-ink: #fcfcfd;
+
+  --border-subtle: #e7e9ed;
+  --border-strong: #c2c6cd;
+
+  --ink: #18181b;
+  --ink-hover: #2a2a2e;
+  --ink-active: #0c0c0e;
+  --ink-fg: #fcfcfd;
+
+  --signal: #4f46e5;
+  --signal-hover: #4338ca;
+  --signal-fg: #ffffff;
+  --signal-soft: #eef0fe;
+  --signal-soft-hover: #e0e3fd;
+  --signal-border: #c7cbfb;
+
+  --info: #0e86d0;
+  --info-fg: #0b6aa6;
+  --info-soft: #e6f3fb;
+  --info-border: #b3dcf1;
+  --success-fg: #0f7a4a;
+  --success-soft: #e7f6ee;
+  --success-border: #b5e3c9;
+  --warning-fg: #9a6206;
+  --warning-soft: #fdf3e2;
+  --warning-border: #f3d9a6;
+  --danger-fg: #b91c1c;
+  --danger-soft: #fcebea;
+  --danger-border: #f3c0bd;
+
+  /* —— HeroUI 适配 · 浅色 —— */
+  --background: #f5f6f7;
+  --foreground: #16171a;
+  --surface: #ffffff;
+  --surface-secondary: #edeef1;
+  --surface-tertiary: #e4e6ea;
+  --overlay: #ffffff;
+  --muted: #565a63;
+  --default: #edeef1;
+  --accent: #18181b;
+  --accent-foreground: #fcfcfd;
+  --accent-hover: #2a2a2e;
+  --accent-soft: #eef0fe;
+  --accent-soft-foreground: #4338ca;
+  --accent-soft-hover: #e0e3fd;
+  --accent-border: #c7cbfb;
+  --focus: #4f46e5;
+  --link: #4f46e5;
+  --success: #1a9e64;
+  --success-foreground: #fcfcfd;
+  --success-soft-foreground: #0f7a4a;
+  --success-soft-hover: #d9f0e5;
+  --warning: #d98a0b;
+  --warning-foreground: var(--eclipse);
+  --warning-soft-foreground: #9a6206;
+  --warning-soft-hover: #fae8cc;
+  --danger: #dc2d2d;
+  --danger-foreground: #fcfcfd;
+  --danger-soft-foreground: #b91c1c;
+  --danger-soft-hover: #f9dcda;
+  --segment: #edeef1;
+  --segment-foreground: #16171a;
+  --border: #d8dbe0;
+  --separator: #e7e9ed;
+  --backdrop: rgba(15, 17, 20, 0.42);
+
+  /* 表单字段（控件圆角收敛 16 → 8；保留可见描边） */
+  --field-radius: 8px;
+  --field-border-width: 1px;
+  --field-border: #d8dbe0;
+  --field-border-hover: #c2c6cd;
+  --field-border-focus: #4f46e5;
+
+  /* —— 图表 6 色 · 浅色 —— */
+  --chart-1: #4f46e5;
+  --chart-2: #12946b;
+  --chart-3: #c98a0b;
+  --chart-4: #d6455b;
+  --chart-5: #8b5cf6;
+  --chart-6: #0e86d0;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--foreground);
+}
+
+/* HeroUI 3.2.4 Tabs.Indicator crashes (SharedElementTransition). Selected
+   tabs and pagination current-page otherwise stay unfilled / gray. Glue both
+   to accent-soft so selection matches ToggleButton / Switch / Radio. */
+.tabs__tab[data-selected="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-soft-foreground);
+  box-shadow: none;
+}
+
+.pagination__link[data-active="true"] {
+  --pagination-link-bg: var(--accent-soft);
+  --pagination-link-bg-hover: var(--accent-soft-hover);
+  --pagination-link-bg-pressed: var(--accent-soft-hover);
+  --pagination-link-fg: var(--accent-soft-foreground);
+}
+
+/* HeroUI default skeleton sits on surface-tertiary/70 and disappears on
+   white cards. Keep the shimmer, raise the fill so loading is visible. */
+.skeleton {
+  background: color-mix(in oklab, var(--foreground) 10%, var(--surface));
+}
+
+/* Brand loading: cyan scan along the same C rail as the static mark.
+   stroke-dashoffset is the path-length equivalent of a Meter width tween. */
+.brand-mark--loading .brand-mark__scan {
+  stroke-dasharray: 14 86;
+  animation: brand-mark-scan 1.35s linear infinite;
+}
+
+@keyframes brand-mark-scan {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-mark--loading .brand-mark__scan {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.status-dot[data-state="ok"] {
+  background: var(--success);
+}
+
+.status-dot[data-state="warn"] {
+  background: var(--warning);
+}
+
+.status-dot[data-state="danger"] {
+  background: var(--danger);
+}
+
+.account-card .status-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+}
+
+.account-meter {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 0.4rem;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "output"
+    "track";
+}
+
+.account-meter .meter__output,
+.account-meter .meter__track {
+  width: 100%;
+  min-width: 0;
+}
+
+.account-meter .meter__track {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--separator);
+  overflow: hidden;
+}
+
+.account-meter .meter__fill {
+  border-radius: 999px;
+}
+
+.account-meter--window {
+  gap: 0.3rem;
+}
+
+.account-meter--window .meter__track {
+  height: 0.5rem;
+}
+
+/* HeroUI Tooltip.Trigger is inline-block; quota windows must each occupy a
+   full row on the account card instead of sitting side by side. */
+.account-quota-windows .tooltip__trigger {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.runtime-meter {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.15rem;
+  height: 0.5rem;
+  align-items: end;
+}
+
+.runtime-meter__seg {
+  display: block;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--separator);
+  transform: scaleY(0.32);
+  transform-origin: center bottom;
+  opacity: 0.45;
+}
+
+.runtime-meter__seg[data-on="true"] {
+  transform: scaleY(1);
+  opacity: 1;
+}
+
+.runtime-meter__seg[data-tone="ok"] {
+  background: var(--success);
+}
+
+.runtime-meter__seg[data-tone="warn"] {
+  background: var(--warning);
+}
+
+.runtime-meter__seg[data-tone="danger"] {
+  background: var(--danger);
+}
+
+.runtime-meter__seg[data-tone="muted"] {
+  background: var(--muted);
+}
+
+.release-notes-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface-secondary);
+  padding: 0.75rem 1rem 0.85rem;
+}
+
+.release-notes-box {
+  max-height: min(22rem, 52vh);
+  margin-top: 0.5rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.15rem;
+}
+
+.release-notes-box--compact {
+  max-height: 10rem;
+  margin-top: 0;
+}
+
+.release-notes {
+  color: var(--foreground);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.release-notes h3,
+.release-notes h4 {
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.release-notes h3 + ul,
+.release-notes h4 + ul,
+.release-notes h3 + p,
+.release-notes h4 + p {
+  margin-top: 0;
+}
+
+.release-notes ul {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1.05rem;
+}
+
+.release-notes li {
+  overflow-wrap: anywhere;
+}
+
+.release-notes li::marker {
+  color: var(--muted);
+}
+
+.release-notes p {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+}
+
+.release-notes p:last-child,
+.release-notes ul:last-child {
+  margin-bottom: 0;
+}
+
+.release-notes code {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  padding: 0.05rem 0.28rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.release-notes a {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.release-notes strong {
+  font-weight: 600;
+}
+
+.release-notes__empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================================
+   账号池列表（批次 8 页签化：渠道由页签承担，列表不再分组 / 操作列常显 /
+   行含签到列）：8 列 = 标记 · 名称 · 状态 · 开关 · 签到 · 额度 · 错误 · 操作
+   ============================================================================ */
+.acct-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.acct-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 16px minmax(126px, 1.3fr) 100px 78px 58px 84px 68px minmax(104px, 1fr) minmax(112px, 1.4fr) 40px 60px;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  padding: 0 12px;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 12px 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.acct-item {
+  background: var(--surface);
+}
+
+.acct-row {
+  display: grid;
+  grid-template-columns: 16px minmax(126px, 1.3fr) 100px 78px 58px 84px 68px minmax(104px, 1fr) minmax(112px, 1.4fr) 40px 60px;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px;
+  border-top: 1px solid var(--border-subtle);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 120ms ease;
+}
+
+.acct-row:hover {
+  background: var(--surface-hover);
+}
+
+.acct-mark {
+  display: inline-flex;
+  align-items: center;
+}
+
+.acct-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.acct-name .nm {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.acct-name .tag {
+  flex: 0 0 auto;
+  max-width: 128px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-sunken);
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.acct-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.acct-state .w {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* 行内开关列（批次 9 拆列）：签到 / 模型各占一列（表头分别标注，列内不带文字）；
+   ≥1280px 在行上展示，更窄宽度隐藏并回落展开卡内的同名开关
+   （.row-switches-fallback，见下方 media）。 */
+.col-sw-checkin,
+.col-sw-models {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.acct-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* 操作拆列（批次 9）：刷新（图标按钮）/ 启用状态（开关 + 展开箭头，开关无文字）。 */
+.col-refresh {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.col-enabled {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* 签到结果列（批次 9 自「签到」合并列拆出）：状态点 + 短标签。 */
+.ck-result {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.ck-result .ck-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  cursor: help;
+}
+
+.ck-result .ck-state .w {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* 立即签到列（批次 9 自「签到」合并列拆出）：图标按钮。 */
+.ck-now {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.quota-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.quota-mini {
+  position: relative;
+  display: block;
+  flex: 1 1 auto;
+  min-width: 36px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+
+.quota-mini__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 999px;
+  background: var(--success);
+}
+
+.quota-mini__fill[data-tone='warn'] {
+  background: var(--warning);
+}
+
+.quota-mini__fill[data-tone='danger'] {
+  background: var(--danger);
+}
+
+.show-more-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px 8px;
+}
+
+.acct-detail {
+  padding: 12px;
+  background: var(--surface-sunken);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.detail-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 960px;
+}
+
+.detail-auth {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.detail-kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 6px 18px;
+  font-size: 12px;
+}
+
+.detail-kv .kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--border-subtle);
+}
+
+.detail-kv .k {
+  color: var(--text-secondary);
+}
+
+.detail-kv .v {
+  color: var(--text);
+  min-width: 0;
+}
+
+.detail-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ⋯ 触发器复用 .button 类（Dropdown.Trigger 自身即 button，避免 button 嵌套）：
+   .dropdown__trigger 的 inline-block 会盖掉 .button 的 inline-flex 居中，这里按更高
+   特异性恢复（否则 icon-only 图标不居中）。 */
+.detail-actions [data-slot='dropdown-trigger'] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px;
+  background: var(--border-subtle);
+}
+
+/* 行内开关列的宽度回落（批次 7；批次 9 扩到两列）：<1280px 隐藏「签到 / 模型」
+   开关列并同步收缩列模板（表头与行必须一致），开关功能由展开卡内的
+   .row-switches-fallback 承担；签到结果 / 立即签到 / 刷新 / 启用等列不回落。 */
+@media (max-width: 1279px) {
+  .acct-head,
+  .acct-row {
+    grid-template-columns: 16px minmax(126px, 1.3fr) 100px 84px 68px minmax(104px, 1fr) minmax(112px, 1.4fr) 40px 60px;
+  }
+
+  .acct-head .col-sw-checkin,
+  .acct-head .col-sw-models,
+  .acct-row .col-sw-checkin,
+  .acct-row .col-sw-models {
+    display: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .row-switches-fallback {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .acct-head {
+    display: none;
+  }
+
+  .acct-row {
+    grid-template-columns: 20px 1fr auto;
+    grid-auto-rows: auto;
+    height: auto;
+    padding: 10px 12px;
+    row-gap: 8px;
+  }
+
+  .acct-row .quota-cell,
+  .acct-row .acct-error,
+  .acct-row .ck-result,
+  .acct-row .ck-now,
+  .acct-row .col-refresh,
+  .acct-row .col-enabled {
+    grid-column: 2 / 4;
+  }
+}
+
+/* ============================================================================
+   账号池 · 快捷筛选条与行动视图（重构批次 1b-B；批次 9 工具栏重排）
+   ============================================================================ */
+.qf-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.qf-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 96px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.qf-cell:hover {
+  background: var(--surface-hover);
+}
+
+.qf-cell .n {
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.qf-cell .l {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.qf-cell[data-kind='avail'] .n {
+  color: var(--success-fg);
+}
+
+.qf-cell[data-kind='attn'] .n {
+  color: var(--danger-fg);
+}
+
+.qf-cell[data-kind='transit'] .n {
+  color: var(--warning-fg);
+}
+
+.qf-cell.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+}
+
+.qf-cell.is-active .n,
+.qf-cell.is-active .l {
+  color: var(--accent-soft-foreground);
+}
+
+.qf-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.qf-dot[data-kind='avail'] {
+  background: var(--success);
+}
+
+.qf-dot[data-kind='attn'] {
+  background: var(--danger);
+}
+
+.qf-dot[data-kind='transit'] {
+  background: var(--warning);
+}
+
+.qf-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent-soft-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.qf-clear:hover {
+  background: var(--surface-hover);
+}
+
+.action-view {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.action-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 12px 12px 0 0;
+}
+
+.action-head .spacer {
+  flex: 1 1 auto;
+}
+
+.action-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.action-dot[data-kind='attn'] {
+  background: var(--danger);
+}
+
+.action-dot[data-kind='transit'] {
+  background: var(--warning);
+}
+
+.action-rows .acct-item:first-child .acct-row {
+  border-top: 0;
+}
+
+/* ============================================================================
+   页内分段控件（重构批次 2：福利三页签等；激活态 accent-soft + accent 字）
+   ============================================================================ */
+.seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-sunken);
+}
+
+.seg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.seg-item:hover {
+  color: var(--text);
+}
+
+.seg-item.active {
+  background: var(--accent-soft);
+  color: var(--accent-soft-foreground);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+}
+
+.seg-item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.seg-count {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.seg-item.active .seg-count {
+  color: var(--accent-soft-foreground);
+}
+
+/* ============================================================================
+   工作台 · 待办收件箱（重构批次 3 · 第一公民）
+   ============================================================================ */
+.wb-inbox {
+  display: flex;
+  flex-direction: column;
+}
+
+.wb-inbox-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text);
+  font-size: 13px;
+  text-decoration: none;
+  transition: background 120ms ease;
+}
+
+.wb-inbox-item:first-child {
+  border-top: 0;
+}
+
+.wb-inbox-item:hover {
+  background: var(--surface-hover);
+}
+
+.wb-inbox-item .sev {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.wb-inbox-item .sev[data-sev='danger'] {
+  background: var(--danger);
+}
+
+.wb-inbox-item .sev[data-sev='warning'] {
+  background: var(--warning);
+}
+
+.wb-inbox-item .txt {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.wb-inbox-item .txt b {
+  font-weight: 600;
+}
+
+.wb-inbox-item .txt .sep {
+  margin: 0 6px;
+  color: var(--text-tertiary);
+}
+
+.wb-inbox-item .txt .provider {
+  color: var(--text-secondary);
+}
+
+.wb-inbox-item .meta {
+  flex: none;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wb-inbox-item .go {
+  flex: none;
+  display: inline-flex;
+  color: var(--text-tertiary);
+}
+
+.wb-inbox-item:hover .go {
+  color: var(--accent-soft-foreground);
+}
+
+.wb-inbox-foot {
+  padding: 9px 16px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-sunken);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.wb-inbox-empty {
+  padding: 22px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ============================================================================
+   收件箱跳转 · 焦点高亮（重构批次 3：目标行携带 data-focus）
+   ============================================================================ */
+.acct-item[data-focus='true'] > .acct-row,
+.acct-item[data-focus='true'] > .acct-row:hover {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--signal);
+}
+
+/* ============================================================================
+   指标卡 · Sparkline（重构批次 3b：信号靛蓝折线 + 淡面积）
+   ============================================================================ */
+.spark-line {
+  fill: none;
+  stroke: var(--signal);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.spark-area {
+  fill: var(--signal-soft);
+  stroke: none;
+  opacity: 0.55;
+}

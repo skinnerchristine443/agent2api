@@ -1,0 +1,28 @@
+package console
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"agent2api/internal/control"
+)
+
+func (h *Handler) HandleSystemSettings(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		writeJSON(w, http.StatusOK, h.System.Current(r.Context()))
+	case http.MethodPatch:
+		var input control.SystemSettingsPatch
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxConsoleBodyBytes)).Decode(&input); err != nil {
+			writeErr(w, http.StatusBadRequest, "invalid_request", err.Error())
+			return
+		}
+		if err := h.System.Patch(r.Context(), input); err != nil {
+			writeOperationError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, h.System.Current(r.Context()))
+	default:
+		writeErr(w, http.StatusMethodNotAllowed, "method_not_allowed", "GET or PATCH only")
+	}
+}

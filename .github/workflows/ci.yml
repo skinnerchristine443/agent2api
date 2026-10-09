@@ -1,0 +1,143 @@
+name: ci
+
+# 项目原本手动运行的验收套件，拆分为三个 job：
+# `verify`（在单个 Linux runner 上做 lint / build / frontend）、`go-test`
+# （在两个目标平台上跑套件 —— Linux 部署与 macOS
+# 开发）以及 `cross-build`（编译门禁）。在 `verify` 中，Go
+# 步骤与前端构建刻意串行执行 —— 二者叠加的
+# 内存占用曾把一个开发者 shell 拖垮。
+#
+# 实时测试在此按设计排除（`//go:build live`）：它们需要真实
+# 账号。verify job 只对它们做类型检查，因此它们不会悄悄腐坏。
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # go vet 与 go build 不检查格式，因此偏差会悄悄
+      # 累积（加入此门禁时已有九个文件）。
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "not gofmt-clean:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go build
+        run: go build ./...
+
+      # 对带 live tag 的文件做类型检查而不运行它们：无法再编译的
+      # 实时测试比没有实时测试更糟。
+      - name: go vet (live build tag)
+        run: go vet -tags live ./...
+
+      # 关键包覆盖率下限守卫（下限来自 2026-10-07 / 2026-10-09 实测，见脚本注释）。
+      - name: coverage guard
+        run: ./scripts/check-coverage.sh
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      # lint（oxlint）：本地 `make check` 已含同一步（frontend-lint），
+      # 此前 CI 缺失——补齐两处的一致性（审查 P2-7）。
+      - name: frontend lint
+        working-directory: frontend
+        run: npm run lint
+
+      # 约定护栏（字号 / 颜色字面量 / 超长行 / pages 值导入等；基线棘轮只减不增）。
+      # 本地 `make check` 已含同一步，此处为 CI 逐步骤复刻。
+      - name: frontend conventions
+        working-directory: frontend
+        run: node scripts/check-conventions.mjs
+
+      # 相比构建，单元测试开销很小；先运行它们，使逻辑
+      # 回归在产出 bundle 之前就让 job 失败。
+      - name: frontend tests
+        working-directory: frontend
+        run: npm test
+
+      - name: frontend build
+        working-directory: frontend
+        env:
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: npm run build
+
+      # 二进制会内嵌 internal/webui/static；未同步的前端改动
+      # 会发布出过期的 UI（以前发生过）。
+      - name: embedded assets must match the frontend build
+        run: |
+          node frontend/scripts/sync-static.mjs
+          git diff --exit-code -- internal/webui/static
+
+  # Go 套件在两个目标平台上都运行：Linux 是部署环境，
+  # macOS 是开发环境，而平台敏感的代码（原子写入、路径、
+  # 时区）只会在运行时才显现差异。Windows 不在范围内。
+  go-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # race 检测器需要 cgo 与 C 工具链（Go 官方文档），因此只在 Linux 腿
+      # 启用：使数据竞争回归（如选号池）在 CI 中真实生效，而不是只在本地
+      # 手动跑；macOS 腿保留普通模式，继续覆盖平台敏感行为。
+      - name: go test
+        if: matrix.os != 'ubuntu-latest'
+        run: go test ./...
+      - name: go test (race)
+        if: matrix.os == 'ubuntu-latest'
+        run: go test -race ./...
+
+  # 针对本项目目标平台的编译期门禁：darwin（本地
+  # 开发）与 linux（部署）。Windows 已移除（没有用例）；
+  # 交叉编译出的测试二进制无法在此执行，因此此 job 只用于
+  # 捕获编译期损坏 —— 而非运行套件。
+  cross-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [darwin, linux]
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: go build (${{ matrix.os }}/${{ matrix.arch }})
+        env:
+          CGO_ENABLED: '0'
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+        run: go build ./...

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "note": "此文件由 node scripts/check-conventions.mjs --update 生成。结构：规则 → 文件 → 匹配键 → 计数；匹配键 = 违规片段（字号类名 / 颜色字面量 / @/api 模块名），__count__ 表示该文件超长 className 行数的棘轮。阶段 3 每批迁移后收紧，阶段 4 清空即转严格模式。",
+  "generatedAt": "2026-10-09T02:01:00.302Z",
+  "rules": {
+    "font-size": {
+      "src/components/access/EndpointList.tsx": {
+        "text-[10px]": 1
+      },
+      "src/components/accounts/QuotaMeter.tsx": {
+        "text-[10px]": 3
+      },
+      "src/components/accounts/RuntimeMeter.tsx": {
+        "text-[10px]": 1
+      },
+      "src/components/layout/AppSidebar.tsx": {
+        "text-[14px]": 2
+      },
+      "src/components/ui/FilterSearchSelect.tsx": {
+        "text-[10px]": 1
+      },
+      "src/components/usage/UsageTrendChart.tsx": {
+        "text-[10px]": 1
+      },
+      "src/pages/LoginPage.tsx": {
+        "text-[clamp(2.25rem,4vw,3.6rem)]": 1
+      }
+    },
+    "long-classname-line": {
+      "src/components/layout/AppSidebar.tsx": {
+        "__count__": 2
+      },
+      "src/components/ui/OptionTiles.tsx": {
+        "__count__": 1
+      }
+    }
+  }
+}

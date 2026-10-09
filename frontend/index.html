@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- 自托管主字重（Outfit 400）：crossorigin 必写，否则与 CSS 发起的字体请求
+         模式不一致会触发二次下载；由 Vite 改写为 /assets/<hash>.woff2。 -->
+    <link rel="preload" as="font" type="font/woff2" href="/src/assets/fonts/outfit-latin-400-normal.woff2" crossorigin />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#F5F5F5" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>agent2api</title>
+    <meta name="description" content="WorkBuddy / Trae → OpenAI / Anthropic compatible API. Self-hosted gateway." />
+    <meta property="og:title" content="agent2api" />
+    <meta property="og:description" content="WorkBuddy / Trae → OpenAI / Anthropic compatible API. Self-hosted gateway." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-card.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="agent2api" />
+    <meta name="twitter:description" content="WorkBuddy / Trae → OpenAI / Anthropic compatible API. Self-hosted gateway." />
+    <meta name="twitter:image" content="/og-card.svg" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

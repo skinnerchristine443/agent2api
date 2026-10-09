@@ -1,0 +1,58 @@
+# Keep in sync with .gitignore.
+# Build context is the repo root (see deploy/docker-compose.yml: context: ..).
+
+# --- VCS metadata: MUST stay excluded from the build context ---
+.git
+
+# --- Secrets / local env ---
+.env
+deploy/.env
+deploy/docker-compose.override.yml
+
+# --- Dependencies ---
+**/node_modules
+
+# --- Build artifacts (rebuilt inside the image) ---
+bin/
+dist/
+frontend/dist
+internal/webui/static
+*.exe
+
+# --- Databases ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Logs & captures ---
+*.log
+capture-raw
+
+# --- Personal notes: kept locally, never uploaded. ---
+private/
+
+# --- Local agent run logs and workspace data: kept locally, never uploaded. ---
+.agent-runs/
+.workbuddy/
+
+# --- Selection notes: kept locally, never uploaded. ---
+docs/10-候选项目清单-最终版.md
+
+# --- Engineering assurance reports: contain source-trace identifiers, kept locally. ---
+deliverables/
+
+# --- Private / internal docs: kept locally, never uploaded. ---
+docs/PRIVATE_DEPLOYMENT.md
+docs/private
+docs/capture-notes.md
+docs/REQUEST.md
+docs/ARCHITECTURE.md
+docs/PLAN.md
+docs/PROVIDERS.md
+docs/PROVIDERS_TRAE.md
+docs/PROVIDERS_TRAE_SOLO.md
+
+# --- Misc local cruft ---
+web/
+.zcode/
+.DS_Store

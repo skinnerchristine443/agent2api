@@ -462,3 +462,66 @@ func TestSystemSettingsProxyURLReadIsInsideSettingsLock(t *testing.T) {
 		t.Fatalf("database/runtime split: database=%q, the request's runtime value=%q", stored, oldProxy)
 	}
 }
+
+// TestSystemSettingsActivityReportRoundTrip 钉死活跃上报设置的读写与持久化：
+// 默认关闭；PATCH 开启并设时刻后，GET 必须回读到该值，且 secret 落库。
+func TestSystemSettingsActivityReportRoundTrip(t *testing.T) {
+	srv := New(config.Config{
+		Host: "127.0.0.1", Port: 3010, ProxyAPIKey: "secret", ConsoleKey: "secret",
+		Home: t.TempDir(), DataDir: t.TempDir(),
+	})
+	defer srv.Close()
+
+	// 默认：关闭 / 09:00。
+	request := loopbackRequest(http.MethodGet, "/api/system/settings", nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(response, request)
+	if response.Code != http.StatusOK ||
+		!bytes.Contains(response.Body.Bytes(), []byte(`"activity_report_enabled":false`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(`"activity_report_time":"09:00"`)) {
+		t.Fatalf("default settings: %d %s", response.Code, response.Body.String())
+	}
+
+	// PATCH：开启 + 07:30。
+	request = loopbackRequest(http.MethodPatch, "/api/system/settings",
+		bytes.NewBufferString(`{"activity_report_enabled":true,"activity_report_time":"07:30"}`))
+	request.Header.Set("Authorization", "Bearer secret")
+	response = httptest.NewRecorder()
+	srv.Handler().ServeHTTP(response, request)
+	if response.Code != http.StatusOK ||
+		!bytes.Contains(response.Body.Bytes(), []byte(`"activity_report_enabled":true`)) ||
+		!bytes.Contains(response.Body.Bytes(), []byte(`"activity_report_time":"07:30"`)) {
+		t.Fatalf("updated settings: %d %s", response.Code, response.Body.String())
+	}
+
+	// 落库校验。
+	ctx := context.Background()
+	if value, ok, err := srv.Manager.Store().GetSecret(ctx, accounts.ActivityReportEnabledSecret); err != nil || !ok || value != "1" {
+		t.Fatalf("persisted enabled=%q ok=%v err=%v", value, ok, err)
+	}
+	if value, ok, err := srv.Manager.Store().GetSecret(ctx, accounts.ActivityReportTimeSecret); err != nil || !ok || value != "07:30" {
+		t.Fatalf("persisted time=%q ok=%v err=%v", value, ok, err)
+	}
+}
+
+// TestSystemSettingsActivityReportRejectsBadTime 非法时刻必须被拒（不回写 secret）。
+func TestSystemSettingsActivityReportRejectsBadTime(t *testing.T) {
+	srv := New(config.Config{
+		Host: "127.0.0.1", Port: 3010, ProxyAPIKey: "secret", ConsoleKey: "secret",
+		Home: t.TempDir(), DataDir: t.TempDir(),
+	})
+	defer srv.Close()
+
+	request := loopbackRequest(http.MethodPatch, "/api/system/settings",
+		bytes.NewBufferString(`{"activity_report_time":"25:99"}`))
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(response, request)
+	if response.Code == http.StatusOK {
+		t.Fatalf("invalid time must be rejected, got %d %s", response.Code, response.Body.String())
+	}
+	if _, ok, _ := srv.Manager.Store().GetSecret(context.Background(), accounts.ActivityReportTimeSecret); ok {
+		t.Fatal("invalid time must not be persisted")
+	}
+}

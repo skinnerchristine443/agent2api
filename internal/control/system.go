@@ -2,6 +2,7 @@ package control
 
 import (
 	"context"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,6 +42,10 @@ type SystemSettingsPatch struct {
 	KeepaliveTime    *string `json:"keepalive_time"`
 	// WebhookURL 是告警通知出口（空 = 关闭）。
 	WebhookURL *string `json:"webhook_url"`
+	// ActivityReportEnabled / ActivityReportTime 是对话活跃上报（点亮 growth 连登）
+	// 的总开关与本地时刻。默认关闭（见 accounts/activity_report.go）。
+	ActivityReportEnabled *bool   `json:"activity_report_enabled"`
+	ActivityReportTime    *string `json:"activity_report_time"`
 }
 type SystemSettings struct {
 	CrossProviderModelPool       bool                              `json:"cross_provider_model_pool"`
@@ -57,9 +62,12 @@ type SystemSettings struct {
 	AccountDefaults  map[string]accounts.AccountDefaults `json:"account_defaults"`
 	KeepaliveEnabled bool                                `json:"keepalive_enabled"`
 	KeepaliveTime    string                              `json:"keepalive_time"`
-	WebhookURL       string                              `json:"webhook_url"`
-	Timezone         string                              `json:"timezone"`
-	SessionAffinity  executor.SessionAffinityStats       `json:"session_affinity"`
+	// ActivityReportEnabled 缺省 false（关闭）；ActivityReportTime 缺省 09:00。
+	ActivityReportEnabled bool                          `json:"activity_report_enabled"`
+	ActivityReportTime    string                        `json:"activity_report_time"`
+	WebhookURL            string                        `json:"webhook_url"`
+	Timezone              string                        `json:"timezone"`
+	SessionAffinity       executor.SessionAffinityStats `json:"session_affinity"`
 }
 
 func (h *System) Current(ctx context.Context) SystemSettings {
@@ -94,6 +102,19 @@ func (h *System) Current(ctx context.Context) SystemSettings {
 		if raw, ok, err := h.Settings.GetSecret(ctx, accounts.KeepaliveTimeSecret); err == nil && ok {
 			if normalized, err := accounts.NormalizeKeepaliveTime(raw); err == nil {
 				settings.KeepaliveTime = normalized
+			}
+		}
+	}
+	// 活跃上报（缺省：关闭 / 09:00）。
+	settings.ActivityReportEnabled = accounts.ActivityReportEnabled(os.Getenv(accounts.ActivityReportEnvFallback))
+	settings.ActivityReportTime = accounts.DefaultActivityReportTime
+	if h.Settings != nil {
+		if raw, ok, err := h.Settings.GetSecret(ctx, accounts.ActivityReportEnabledSecret); err == nil && ok {
+			settings.ActivityReportEnabled = accounts.ActivityReportEnabled(raw)
+		}
+		if raw, ok, err := h.Settings.GetSecret(ctx, accounts.ActivityReportTimeSecret); err == nil && ok {
+			if normalized, err := accounts.NormalizeActivityReportTime(raw); err == nil {
+				settings.ActivityReportTime = normalized
 			}
 		}
 	}
@@ -143,7 +164,7 @@ func (h *System) Current(ctx context.Context) SystemSettings {
 }
 
 func (h *System) Patch(ctx context.Context, input SystemSettingsPatch) error {
-	if input.CrossProviderModelPool == nil && input.CheckinDisabledAccounts == nil && input.RoutingStrategy == nil && input.RatePreference == nil && input.ExpiryWindowSeconds == nil && input.SecondaryExpiryWindowSeconds == nil && input.ProxyURL == nil && input.WorkBuddyCheckinTime == nil && len(input.CheckinTimes) == 0 && len(input.CheckinWindows) == 0 && len(input.AccountDefaults) == 0 && input.KeepaliveEnabled == nil && input.KeepaliveTime == nil && input.WebhookURL == nil {
+	if input.CrossProviderModelPool == nil && input.CheckinDisabledAccounts == nil && input.RoutingStrategy == nil && input.RatePreference == nil && input.ExpiryWindowSeconds == nil && input.SecondaryExpiryWindowSeconds == nil && input.ProxyURL == nil && input.WorkBuddyCheckinTime == nil && len(input.CheckinTimes) == 0 && len(input.CheckinWindows) == 0 && len(input.AccountDefaults) == 0 && input.KeepaliveEnabled == nil && input.KeepaliveTime == nil && input.WebhookURL == nil && input.ActivityReportEnabled == nil && input.ActivityReportTime == nil {
 		return operationError("invalid_request", "a system setting is required")
 	}
 	if input.ExpiryWindowSeconds != nil && *input.ExpiryWindowSeconds < 0 {
@@ -338,6 +359,24 @@ func (h *System) Patch(ctx context.Context, input SystemSettingsPatch) error {
 			value = "1"
 		}
 		if err := h.Settings.SetSecret(ctx, accounts.KeepaliveEnabledSecret, value); err != nil {
+			return operationError("system_settings_save_failed", err.Error())
+		}
+	}
+	if input.ActivityReportEnabled != nil {
+		value := "0"
+		if *input.ActivityReportEnabled {
+			value = "1"
+		}
+		if err := h.Settings.SetSecret(ctx, accounts.ActivityReportEnabledSecret, value); err != nil {
+			return operationError("system_settings_save_failed", err.Error())
+		}
+	}
+	if input.ActivityReportTime != nil {
+		normalized, err := accounts.NormalizeActivityReportTime(*input.ActivityReportTime)
+		if err != nil {
+			return operationError("invalid_request", err.Error())
+		}
+		if err := h.Settings.SetSecret(ctx, accounts.ActivityReportTimeSecret, normalized); err != nil {
 			return operationError("system_settings_save_failed", err.Error())
 		}
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"agent2api/internal/accounts"
@@ -17,43 +16,35 @@ import (
 // 本网关此前只实现了国际版 Web 控制台 ACP 会话（activity.go，用于**领取每日
 // 额度发放**），没有连登点亮通道。本排程补上该通道。
 //
-// **默认关闭**（`AGENT2API_ACTIVITY_REPORT`）：参照项目实测「国际版 /v2/report
-// 可用」，但本项目的账号形态/上游契约需先 A/B 取证（见 docs/03）——
-// 取证通过后再开启。关闭时本函数零上游调用、零副作用。
+// **默认关闭**：开关与时刻存在全局设置（secret）里，控制台可改、无需重启。
+// 环境变量 `AGENT2API_ACTIVITY_REPORT=1` 作为无控制台部署的兜底（设置优先）。
+// A/B 取证已通过（见 docs/03）：国际版 /v2/report 一次 POST 即点亮连登。
 //
 // 风控口径（对齐参照项目）：每号每天 1 次即可，不做多时点高频。
-const (
-	activityReportEnv = "AGENT2API_ACTIVITY_REPORT"
-	// activityReportTimeEnv 是每日上报的本地 HH:MM 时刻，缺省 09:00
-	// （早于签到窗口，使连登与签到解耦，互不阻塞）。
-	activityReportTimeEnv = "AGENT2API_ACTIVITY_REPORT_TIME"
-	// defaultActivityReportTime 缺省触发时刻。
-	defaultActivityReportTime = "09:00"
-	// activityAccountDelay 账号间限速（对齐参照项目 800ms），避免上游风控。
-	activityAccountDelay = 800 * time.Millisecond
-)
 
-// activityReportEnabled 报告排程是否开启。只有显式的肯定取值才开启
-// （与 STREAM_HEARTBEAT/HEAD_GATE 同一约定：默认关）。
-func activityReportEnabled() bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv(activityReportEnv))) {
-	case "1", "true", "yes", "on":
-		return true
-	default:
-		return false
-	}
-}
+// activityAccountDelay 账号间限速（对齐参照项目 800ms），避免上游风控。
+const activityAccountDelay = 800 * time.Millisecond
 
-// activityReportTime 返回配置的本地触发时刻（HH:MM），非法值回落缺省。
-func activityReportTime() string {
-	raw := strings.TrimSpace(os.Getenv(activityReportTimeEnv))
-	if raw == "" {
-		return defaultActivityReportTime
+// activityReportConfig 读取活跃上报的开关与本地时刻。
+//
+// 优先级：设置（secret）> 环境变量兜底 > 内置缺省（关闭 / 09:00）。
+// 读取失败不改变「关闭」这一安全缺省（不因一次 DB 抖动而意外开启上报）。
+func (manager *Manager) activityReportConfig(ctx context.Context) (bool, string) {
+	enabled := accounts.ActivityReportEnabled(os.Getenv(accounts.ActivityReportEnvFallback))
+	at := accounts.DefaultActivityReportTime
+	store := manager.store
+	if store == nil {
+		return enabled, at
 	}
-	if _, err := time.Parse("15:04", raw); err != nil {
-		return defaultActivityReportTime
+	if raw, ok, err := store.GetSecret(ctx, accounts.ActivityReportEnabledSecret); err == nil && ok {
+		enabled = accounts.ActivityReportEnabled(raw)
 	}
-	return raw
+	if raw, ok, err := store.GetSecret(ctx, accounts.ActivityReportTimeSecret); err == nil && ok {
+		if normalized, err := accounts.NormalizeActivityReportTime(raw); err == nil {
+			at = normalized
+		}
+	}
+	return enabled, at
 }
 
 // activityReportDue 报告在 now 时刻是否应触发当日上报：沿用 keepalive 的

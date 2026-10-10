@@ -93,6 +93,9 @@ export type SystemSettings = {
   /** 保活开关与本地时刻（全局）。 */
   keepalive_enabled: boolean
   keepalive_time: string
+  /** 对话活跃上报（点亮 growth 连登）：默认关闭；时刻缺省 09:00。 */
+  activity_report_enabled: boolean
+  activity_report_time: string
   /** 告警通知出口（脱敏回显；空 = 关闭）。 */
   webhook_url: string
   timezone: string
@@ -128,7 +131,7 @@ export function fetchSystemSettings(signal?: AbortSignal) {
   return api<SystemSettings>('/api/system/settings', { signal })
 }
 
-export function updateSystemSettings(input: { cross_provider_model_pool?: boolean; checkin_disabled_accounts?: boolean; routing_strategy?: SystemSettings['routing_strategy']; rate_preference?: boolean; expiry_window_seconds?: number; secondary_expiry_window_seconds?: number; proxy_url?: string; workbuddy_checkin_time?: string; checkin_times?: Record<string, string>; checkin_windows?: Record<string, CheckinWindow>; account_defaults?: Record<string, AccountDefaults>; keepalive_enabled?: boolean; keepalive_time?: string; webhook_url?: string }, signal?: AbortSignal) {
+export function updateSystemSettings(input: { cross_provider_model_pool?: boolean; checkin_disabled_accounts?: boolean; routing_strategy?: SystemSettings['routing_strategy']; rate_preference?: boolean; expiry_window_seconds?: number; secondary_expiry_window_seconds?: number; proxy_url?: string; workbuddy_checkin_time?: string; checkin_times?: Record<string, string>; checkin_windows?: Record<string, CheckinWindow>; account_defaults?: Record<string, AccountDefaults>; keepalive_enabled?: boolean; keepalive_time?: string; activity_report_enabled?: boolean; activity_report_time?: string; webhook_url?: string }, signal?: AbortSignal) {
   return api<SystemSettings>('/api/system/settings', {
     method: 'PATCH',
     body: JSON.stringify(input),

@@ -34,44 +34,47 @@ func seedActivityAccount(t *testing.T, store *sqlstore.Store, name, provider str
 	}
 }
 
-// TestActivityReportDisabledByDefault 钉死「默认关闭」契约：未设置
-// AGENT2API_ACTIVITY_REPORT 时排程不启用（零上游调用）。
-func TestActivityReportDisabledByDefault(t *testing.T) {
-	t.Setenv(activityReportEnv, "")
-	if activityReportEnabled() {
+// TestActivityReportConfigDefaultsOff 钉死安全缺省：无设置、无环境变量时
+// 开关为「关闭」，时刻为 09:00。关闭时排程零上游调用。
+func TestActivityReportConfigDefaultsOff(t *testing.T) {
+	t.Setenv(accounts.ActivityReportEnvFallback, "")
+	manager, _ := newActivityTestManager(t)
+	enabled, at := manager.activityReportConfig(context.Background())
+	if enabled {
 		t.Fatal("activity report must be off by default")
 	}
-}
-
-// TestActivityReportEnabledByExplicitTrue 只有显式肯定值才开启。
-func TestActivityReportEnabledByExplicitTrue(t *testing.T) {
-	for _, raw := range []string{"1", "true", "TRUE", "yes", "on"} {
-		t.Setenv(activityReportEnv, raw)
-		if !activityReportEnabled() {
-			t.Fatalf("value %q must enable activity report", raw)
-		}
-	}
-	for _, raw := range []string{"0", "false", "no", "off", "whatever"} {
-		t.Setenv(activityReportEnv, raw)
-		if activityReportEnabled() {
-			t.Fatalf("value %q must NOT enable activity report", raw)
-		}
+	if at != accounts.DefaultActivityReportTime {
+		t.Fatalf("default time = %q, want %q", at, accounts.DefaultActivityReportTime)
 	}
 }
 
-// TestActivityReportTimeConfig 缺省与非法值都回落到缺省时刻。
-func TestActivityReportTimeConfig(t *testing.T) {
-	t.Setenv(activityReportTimeEnv, "")
-	if got := activityReportTime(); got != defaultActivityReportTime {
-		t.Fatalf("default time = %q, want %q", got, defaultActivityReportTime)
+// TestActivityReportConfigReadsSettings 设置（secret）优先于环境变量兜底。
+func TestActivityReportConfigReadsSettings(t *testing.T) {
+	t.Setenv(accounts.ActivityReportEnvFallback, "")
+	manager, store := newActivityTestManager(t)
+	ctx := context.Background()
+	if err := store.SetSecret(ctx, accounts.ActivityReportEnabledSecret, "1"); err != nil {
+		t.Fatal(err)
 	}
-	t.Setenv(activityReportTimeEnv, "07:30")
-	if got := activityReportTime(); got != "07:30" {
-		t.Fatalf("configured time = %q, want 07:30", got)
+	if err := store.SetSecret(ctx, accounts.ActivityReportTimeSecret, "07:30"); err != nil {
+		t.Fatal(err)
 	}
-	t.Setenv(activityReportTimeEnv, "not-a-time")
-	if got := activityReportTime(); got != defaultActivityReportTime {
-		t.Fatalf("invalid time must fall back to default, got %q", got)
+	enabled, at := manager.activityReportConfig(ctx)
+	if !enabled {
+		t.Fatal("secret enable must turn the schedule on")
+	}
+	if at != "07:30" {
+		t.Fatalf("time = %q, want 07:30", at)
+	}
+}
+
+// TestActivityReportConfigEnvFallback 显式环境变量在无设置时兜底开启。
+func TestActivityReportConfigEnvFallback(t *testing.T) {
+	t.Setenv(accounts.ActivityReportEnvFallback, "1")
+	manager, _ := newActivityTestManager(t)
+	enabled, _ := manager.activityReportConfig(context.Background())
+	if !enabled {
+		t.Fatal("explicit env fallback must enable when no setting exists")
 	}
 }
 

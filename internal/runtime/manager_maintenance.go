@@ -363,9 +363,10 @@ func (manager *Manager) runMaintenanceTick(ctx context.Context, now time.Time, l
 			stopKeepalive()
 			*lastKeepaliveDay = now.Format("2006-01-02")
 		}
-		// 对话活跃上报（点亮 growth 连登）。默认关闭（AGENT2API_ACTIVITY_REPORT）；
-		// 关闭时零上游调用。每号每天 1 次，本地时刻可配（缺省 09:00）。
-		if activityReportEnabled() && activityReportDue(now, activityReportTime(), *lastActivityDay) {
+		// 对话活跃上报（点亮 growth 连登）。默认关闭（设置 › 签到，或
+		// AGENT2API_ACTIVITY_REPORT=1 兜底）；关闭时零上游调用。
+		// 每号每天 1 次，本地时刻可配（缺省 09:00）。
+		if enabled, at := manager.activityReportConfig(ctx); enabled && activityReportDue(now, at, *lastActivityDay) {
 			reportCtx, stopReport := context.WithTimeout(ctx, 5*time.Minute)
 			manager.runScheduledActivityReport(reportCtx)
 			stopReport()

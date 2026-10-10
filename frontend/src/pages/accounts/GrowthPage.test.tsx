@@ -3,8 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 
-import { ApiKeyProvider } from '@/hooks/ApiKeyContext'
-import { I18nProvider } from '@/hooks/I18nContext'
+import { ApiKeyProvider } from '@/hooks/ApiKeyProvider'
+import { I18nProvider } from '@/hooks/I18nProvider'
 
 import { GrowthPage } from './GrowthPage'
 

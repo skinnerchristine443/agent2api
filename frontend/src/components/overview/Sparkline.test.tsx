@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildSparkPath } from './Sparkline'
+import { buildSparkPath } from './sparklinePath'
 
 describe('Sparkline 路径构建', () => {
   it('按 min–max 归一映射到 108×34 视区（上缘 4 / 下缘 30）', () => {

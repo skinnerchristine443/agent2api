@@ -81,7 +81,7 @@ export function useSystemUpdate(t: Translate, setError: (message: string) => voi
 
   // 更新完成 → 启动自动刷新倒计时（原 render 期 setState 改为提交后 effect）。
   useEffect(() => {
-    if (justUpdated && reloadIn == null) setReloadIn(3)
+    if (justUpdated && reloadIn == null) setReloadIn(3) // eslint-disable-line react/set-state-in-effect -- 更新完成即启动刷新倒计时
   }, [justUpdated, reloadIn])
 
   // 2s 更新状态轮询：进行中 / 刚更新才轮询，完成即停（条件由 updatePollActive 持有）。
@@ -95,7 +95,7 @@ export function useSystemUpdate(t: Translate, setError: (message: string) => voi
   useEffect(() => {
     const result = updatePoll.data
     if (!result) return
-    setInfo(result)
+    setInfo(result) // eslint-disable-line react/set-state-in-effect -- 轮询结果到达即合并进本地状态
     setInitialVersion((current) => current || result.current_version || '')
     const failed = result.update?.state === 'failed' || result.update?.state === 'rolled_back' || result.agent?.state === 'failed' || result.agent?.state === 'rolled_back'
     if (failed) setError(result.update?.error || result.agent?.error || t('updateFailedHint'))

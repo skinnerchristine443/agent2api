@@ -50,7 +50,7 @@ export function ExpiryPage() {
     const row = rows.find((item) => item.id === highlightId)
     if (!row) return
     appliedHighlight.current = highlightId
-    setCollapsed((prev) => (prev[row.group] ? { ...prev, [row.group]: false } : prev))
+    setCollapsed((prev) => (prev[row.group] ? { ...prev, [row.group]: false } : prev)) // eslint-disable-line react/set-state-in-effect -- 命中高亮行即展开其分组
   }, [highlightId, rows])
 
   function toggleGroup(group: ExpiryGroupKey) {

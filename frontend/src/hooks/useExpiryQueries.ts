@@ -38,7 +38,7 @@ export function useExpiryQueries(): ExpiryQueries {
   const [refreshingId, setRefreshingId] = useState('')
 
   useEffect(() => {
-    if (settingsQuery.data) setSettings(settingsQuery.data)
+    if (settingsQuery.data) setSettings(settingsQuery.data) // eslint-disable-line react/set-state-in-effect -- 设置取数到达即镜像到本地副本
   }, [settingsQuery.data])
 
   const reloadAccounts = accountsQuery.refresh

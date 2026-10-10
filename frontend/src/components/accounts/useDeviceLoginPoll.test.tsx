@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { fetchLoginStatus } from '@/api/overview'
 import { DEVICE_LOGIN_POLL_MS, useDeviceLoginPoll } from '@/components/accounts/useDeviceLoginPoll'
-import { ApiKeyProvider } from '@/hooks/ApiKeyContext'
+import { ApiKeyProvider } from '@/hooks/ApiKeyProvider'
 
 vi.mock('@/api/overview', () => ({
   fetchLoginStatus: vi.fn(),

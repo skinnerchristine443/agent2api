@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 
-import { I18nProvider } from '@/hooks/I18nContext'
+import { I18nProvider } from '@/hooks/I18nProvider'
 import { NotFoundPage } from './NotFoundPage'
 
 // 栈深 2：无论 goBack 走 history 回退还是无历史回退首页，终点都是 '/'。

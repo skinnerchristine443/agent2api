@@ -95,7 +95,7 @@ export function useDebouncedSearchParam(param: string, delayMs = LOGS_SEARCH_DEB
   const [draft, setDraft] = useState(committed)
 
   useEffect(() => {
-    setDraft(committed)
+    setDraft(committed) // eslint-disable-line react/set-state-in-effect -- 外部(URL)变化即同步草稿
   }, [committed])
 
   useEffect(() => {

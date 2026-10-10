@@ -16,7 +16,9 @@ on:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # 钉住 24.04（而非 `ubuntu-latest`）：后者将于 2026-10-19 迁到 Ubuntu 26，
+    # 漂移会在无预警下改变工具链行为；本仓 CI 显式声明目标平台，迁移需人工评审。
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
@@ -98,7 +100,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # ubuntu 钉 24.04（见 verify 注释）；macos-latest 保持滚动。
+        os: [ubuntu-24.04, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -111,10 +114,10 @@ jobs:
       # 启用：使数据竞争回归（如选号池）在 CI 中真实生效，而不是只在本地
       # 手动跑；macOS 腿保留普通模式，继续覆盖平台敏感行为。
       - name: go test
-        if: matrix.os != 'ubuntu-latest'
+        if: matrix.os != 'ubuntu-24.04'
         run: go test ./...
       - name: go test (race)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: go test -race ./...
 
   # 针对本项目目标平台的编译期门禁：darwin（本地
@@ -122,7 +125,7 @@ jobs:
   # 交叉编译出的测试二进制无法在此执行，因此此 job 只用于
   # 捕获编译期损坏 —— 而非运行套件。
   cross-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:

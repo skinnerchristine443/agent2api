@@ -110,7 +110,7 @@ export function useDeviceLoginPoll(options: Options): DeviceLoginPoll {
       finish('timeout', id, message)
       return
     }
-    timerRef.current = setTimeout(() => { void tick(id, session) }, intervalMs)
+    timerRef.current = setTimeout(() => { void tick(id, session) }, intervalMs) // eslint-disable-line react/immutability -- 闭包内引用 tick，非初始化期访问（误报）
   }, [attempts, finish, intervalMs])
 
   const start = useCallback((id: string) => {

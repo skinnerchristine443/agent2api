@@ -3,8 +3,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ApiKeyProvider } from '@/hooks/ApiKeyContext'
-import { I18nProvider } from '@/hooks/I18nContext'
+import { ApiKeyProvider } from '@/hooks/ApiKeyProvider'
+import { I18nProvider } from '@/hooks/I18nProvider'
 import { API_KEY_STORAGE_KEY } from '@/lib/apiKeyStorage'
 
 const api = vi.hoisted(() => ({

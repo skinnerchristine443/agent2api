@@ -6,18 +6,12 @@ import { accountProviderLabel, tieredTraeCaps } from '@/lib/provider'
 import { reasoningLevelKey } from '@/i18n/messages'
 import type { Translate } from '@/i18n/messages'
 
+import { formatTokens } from './modelFormat'
 
 type Props = {
   model: ModelInfo | null
   t: Translate
   onClose: () => void
-}
-
-function formatTokens(value?: number) {
-  if (!value) return '—'
-  if (value >= 1_000_000) return `${(value / 1_000_000).toString().replace(/\.0$/, '')}M`
-  if (value >= 1000) return `${Math.round(value / 1000)}k`
-  return String(value)
 }
 
 export function ModelDetailsModal({ model, t, onClose }: Props) {
@@ -96,5 +90,3 @@ export function ModelDetailsModal({ model, t, onClose }: Props) {
     </Modal.Root>
   )
 }
-
-export { formatTokens }

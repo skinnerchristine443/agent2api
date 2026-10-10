@@ -144,7 +144,7 @@ export function useRuntimeLogsQuery(filters: RuntimeLogsFilters) {
  */
 function useFilterResetPage(filtersKey: string, page: number) {
   const appliedRef = useRef(filtersKey)
-  const pending = filtersKey !== appliedRef.current
+  const pending = filtersKey !== appliedRef.current // eslint-disable-line react/refs -- 渲染期读 ref 推导页码收敛
   useEffect(() => {
     if (!pending || page !== 1) return
     appliedRef.current = filtersKey

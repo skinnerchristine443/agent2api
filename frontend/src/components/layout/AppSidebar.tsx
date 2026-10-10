@@ -61,7 +61,7 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
   useEffect(() => {
     const domain = navDomainFor(location.pathname)
     if (!domain || navDomainIsDirect(domain)) return
-    setOpenDomains((current) => (current.includes(domain.key) ? current : [...current, domain.key]))
+    setOpenDomains((current) => (current.includes(domain.key) ? current : [...current, domain.key])) // eslint-disable-line react/set-state-in-effect -- 路由变化即自动展开当前域
   }, [location.pathname])
 
   // 折叠态 flyout：Esc 或点击导航外关闭。

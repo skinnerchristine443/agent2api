@@ -1,1 +1,0 @@
-import{r as e}from"./rolldown-runtime-hePW80VL.js";import{Ln as t}from"./PageAlert-CfyGyGNP.js";import{n}from"./Text-BQSSFJNJ.js";var r=e(t(),1),i=(0,r.createContext)(!1),a=e=>{let t=(0,r.use)(i),a=(0,r.use)(n);return!t||a?.slots?.[e]!=null};export{a as n,i as t};

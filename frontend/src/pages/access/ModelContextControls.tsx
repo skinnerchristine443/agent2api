@@ -1,7 +1,7 @@
 import { Tooltip } from '@heroui/react'
 
 import type { ModelInfo } from '@/api/types'
-import { formatTokens } from '@/components/models/ModelDetailsModal'
+import { formatTokens } from '@/components/models/modelFormat'
 import { CompactSwitch } from '@/components/ui/CompactSwitch'
 import { FilterSelect } from '@/components/ui/FilterSelect'
 import { useI18n } from '@/hooks/I18nContext'

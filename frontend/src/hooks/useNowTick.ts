@@ -62,7 +62,7 @@ export function useNowTick(active = true): number {
   useEffect(() => {
     if (!active) return
     const unsubscribe = subscribe(setNow)
-    setNow(sharedNow) // 订阅时对齐共享基准，避免多实例读数不一致
+    setNow(sharedNow) // eslint-disable-line react/set-state-in-effect -- 订阅时对齐共享基准，避免多实例读数不一致
     return unsubscribe
   }, [active])
 

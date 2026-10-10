@@ -60,7 +60,7 @@ export function useAddAccountWizard({ isOpen, onClose, onAdded, presetProvider }
   useEffect(() => {
     if (!isOpen) return
     let cancelled = false
-    setTypesLoading(true)
+    setTypesLoading(true) // eslint-disable-line react/set-state-in-effect -- 打开向导即重置取数态
     setProviderOptions([])
     setAccountType('')
     setBatchRows([])
@@ -100,7 +100,7 @@ export function useAddAccountWizard({ isOpen, onClose, onAdded, presetProvider }
   const hint = optionHint(activeOption, t)
 
   useEffect(() => {
-    if (tab === 'pat' && !showPatTab) setTab('browser')
+    if (tab === 'pat' && !showPatTab) setTab('browser') // eslint-disable-line react/set-state-in-effect -- 页签不可用时回落到浏览器登录
     if (tab === 'import' && !showImportTab) setTab('browser')
   }, [showImportTab, showPatTab, tab])
 
@@ -108,7 +108,7 @@ export function useAddAccountWizard({ isOpen, onClose, onAdded, presetProvider }
     // 不支持浏览器登录的 provider 不应落到空的浏览器标签页；
     // 改为把运维人员送到粘贴 key 的标签页。
     if (hasBrowserLogin) return
-    if (showPatTab) setTab('pat')
+    if (showPatTab) setTab('pat') // eslint-disable-line react/set-state-in-effect -- 不支持浏览器登录则改落 PAT/导入
     else if (showImportTab) setTab('import')
   }, [hasBrowserLogin, showImportTab, showPatTab])
 
@@ -211,7 +211,7 @@ export function useAddAccountWizard({ isOpen, onClose, onAdded, presetProvider }
     providerOptions,
     activeOption,
     hint,
-    settingsLocked: Boolean(createdId.current) || busy,
+    settingsLocked: Boolean(createdId.current) || busy, // eslint-disable-line react/refs -- 渲染期读实例 ref 推导锁定态
     showCallbackPaste,
     hasBrowserLogin,
     showPatTab,

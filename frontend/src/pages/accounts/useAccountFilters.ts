@@ -74,7 +74,7 @@ export function useAccountFilters(): AccountFilters {
 
   // 外部变化（前进 / 后退 / 直链）时同步输入框
   useEffect(() => {
-    setDraftQuery(query)
+    setDraftQuery(query) // eslint-disable-line react/set-state-in-effect -- 外部(URL)变化即同步输入框
   }, [query])
 
   useEffect(() => () => {

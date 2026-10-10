@@ -1,19 +1,13 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import { translate, type Translate } from '@/i18n/messages'
+import { createContext, useContext } from 'react'
 
-type I18nContextValue = {
+import type { Translate } from '@/i18n/messages'
+
+export type I18nContextValue = {
   t: Translate
 }
 
-const I18nContext = createContext<I18nContextValue | null>(null)
-
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const value = useMemo<I18nContextValue>(() => ({
-    t: (key, vars) => translate(key, vars),
-  }), [])
-
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
-}
+// Context 与 Provider 分文件：Provider 文件只导出组件（保持 Fast Refresh 有效）。
+export const I18nContext = createContext<I18nContextValue | null>(null)
 
 export function useI18n() {
   const ctx = useContext(I18nContext)

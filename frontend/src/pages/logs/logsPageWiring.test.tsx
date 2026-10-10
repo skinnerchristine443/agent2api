@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ApiKeyProvider } from '@/hooks/ApiKeyContext'
+import { ApiKeyProvider } from '@/hooks/ApiKeyProvider'
 import { useRequestLogsQuery, useRuntimeLogsQuery } from '@/hooks/useLogsQueries'
 
 import { useRequestLogsFilters, useRuntimeLogsFilters } from './useLogsFilters'

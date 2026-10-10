@@ -70,7 +70,7 @@ export function GrowthPage() {
   // 探明「该渠道不支持」后记住（本会话），用于选择器置灰与原因说明。
   useEffect(() => {
     if (queries.degrade !== 'unsupported' || !selectedProvider) return
-    setUnsupportedProviders((prev) => (prev[selectedProvider] ? prev : { ...prev, [selectedProvider]: true }))
+    setUnsupportedProviders((prev) => (prev[selectedProvider] ? prev : { ...prev, [selectedProvider]: true })) // eslint-disable-line react/set-state-in-effect -- 探明不支持渠道即记住置灰
   }, [queries.degrade, selectedProvider])
 
   // 切换账号（loading）期间立刻以骨架屏取代旧账号内容——旧数据一直挂到

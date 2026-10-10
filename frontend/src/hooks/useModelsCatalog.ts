@@ -39,7 +39,7 @@ export function useModelsCatalog() {
   // 本地副本：PATCH 成功后就地改写（开关 / 档位 / 窗口），新一次取数到达时整体覆盖。
   const [models, setModels] = useState<ModelInfo[]>([])
   useEffect(() => {
-    if (modelsQuery.data) setModels(modelsQuery.data.data || [])
+    if (modelsQuery.data) setModels(modelsQuery.data.data || []) // eslint-disable-line react/set-state-in-effect -- 目录取数到达即镜像到本地副本
   }, [modelsQuery.data])
 
   const providerOptions = useMemo(

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { ACCOUNT_PAGE_SIZES, ListPager, type PageSize } from '@/components/ui/ListPager'
+import { ListPager } from '@/components/ui/ListPager'
+import { ACCOUNT_PAGE_SIZES, type PageSize } from '@/components/ui/pagination'
 import { quotaDisplay, severityRank, type AccountRow } from '@/lib/account'
 
 import { paginate } from './accountsPaging'
@@ -46,7 +47,7 @@ export function AccountsList({ rows, sort, wiring }: Props) {
 
   // 切换渠道 / 筛选 / 排序 / 每页长后回到第 1 页（避免沿用上一列表的页码）。
   useEffect(() => {
-    setPage(1)
+    setPage(1) // eslint-disable-line react/set-state-in-effect -- 换筛选/排序/页长即回第 1 页
   }, [rows, sort, pageSize])
 
   return (

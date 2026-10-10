@@ -1,34 +1,13 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext } from 'react'
 
-import { API_KEY_STORAGE_KEY } from '@/lib/apiKeyStorage'
-
-type ApiKeyContextValue = {
+export type ApiKeyContextValue = {
   apiKey: string
   setApiKey: (value: string) => void
   signOut: () => void
 }
 
-const ApiKeyContext = createContext<ApiKeyContextValue | null>(null)
-
-export function ApiKeyProvider({ children }: { children: ReactNode }) {
-  const [apiKey, setApiKeyState] = useState(() => localStorage.getItem(API_KEY_STORAGE_KEY) || '')
-
-  const value = useMemo<ApiKeyContextValue>(() => ({
-    apiKey,
-    setApiKey: (next) => {
-      const value = String(next || '').trim()
-      if (value) localStorage.setItem(API_KEY_STORAGE_KEY, value)
-      else localStorage.removeItem(API_KEY_STORAGE_KEY)
-      setApiKeyState(value)
-    },
-    signOut: () => {
-      localStorage.removeItem(API_KEY_STORAGE_KEY)
-      setApiKeyState('')
-    },
-  }), [apiKey])
-
-  return <ApiKeyContext.Provider value={value}>{children}</ApiKeyContext.Provider>
-}
+// Context 与 Provider 分文件：Provider 文件只导出组件（保持 Fast Refresh 有效）。
+export const ApiKeyContext = createContext<ApiKeyContextValue | null>(null)
 
 export function useApiKey() {
   const ctx = useContext(ApiKeyContext)

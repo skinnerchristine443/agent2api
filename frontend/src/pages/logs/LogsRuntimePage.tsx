@@ -6,7 +6,8 @@ import type { RuntimeLogEntry } from '@/api/logs'
 import { ObserveTabs } from '@/components/observe/ObserveTabs'
 import { FilterSearchSelect } from '@/components/ui/FilterSearchSelect'
 import { FilterToggle } from '@/components/ui/FilterToggle'
-import { ListPager, type PageSize } from '@/components/ui/ListPager'
+import { ListPager } from '@/components/ui/ListPager'
+import type { PageSize } from '@/components/ui/pagination'
 import { PageAlert } from '@/components/ui/PageAlert'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SearchBar } from '@/components/ui/SearchBar'
@@ -45,7 +46,7 @@ export function LogsRuntimePage() {
   )
   const [pinned, setPinned] = useState<{ id: string; entry: RuntimeLogEntry } | null>(null)
   useEffect(() => {
-    if (sheet.value && liveEntry) setPinned({ id: sheet.value, entry: liveEntry })
+    if (sheet.value && liveEntry) setPinned({ id: sheet.value, entry: liveEntry }) // eslint-disable-line react/set-state-in-effect -- 命中详情条目即钉住快照
   }, [liveEntry, sheet.value])
   const selectedEntry = liveEntry ?? (pinned && pinned.id === sheet.value ? pinned.entry : null)
 

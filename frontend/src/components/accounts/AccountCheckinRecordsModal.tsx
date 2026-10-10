@@ -50,10 +50,12 @@ export function AccountCheckinRecordsModal({ account, t, onClose }: Props) {
     }
   }
 
+  /* eslint-disable react/set-state-in-effect, react-hooks/exhaustive-deps -- 按账号拉取记录；load 故意不入依赖 */
   useEffect(() => {
     if (!accountId) return
     void load()
   }, [accountId])
+  /* eslint-enable react/set-state-in-effect, react-hooks/exhaustive-deps */
 
   return (
     <Modal.Root isOpen={Boolean(account)} onOpenChange={(next: boolean) => { if (!next) onClose() }}>

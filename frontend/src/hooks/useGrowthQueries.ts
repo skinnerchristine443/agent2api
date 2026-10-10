@@ -86,7 +86,7 @@ export function useGrowthQueries(accountId: string): GrowthQueries {
   // 切换账号即清空上一次的领取结果：否则旧账号的 outcomes/errors 会串台
   // 到新账号的领取区（批次 7 反馈）。
   useEffect(() => {
-    setClaimResult(null)
+    setClaimResult(null) // eslint-disable-line react/set-state-in-effect -- 切换账号即清空上一次领取结果
   }, [accountId])
 
   const statusQuery = useApiQuery(
@@ -155,7 +155,7 @@ export function useGrowthQueries(accountId: string): GrowthQueries {
   })
 
   const active = Boolean(accountId)
-  const degrade = classify(statusErrorRef.current, accountId) || classify(claimErrorRef.current, accountId)
+  const degrade = classify(statusErrorRef.current, accountId) || classify(claimErrorRef.current, accountId) // eslint-disable-line react/refs -- 渲染期读错误 ref 推导降级态
 
   return {
     accounts: accountsQuery.data?.data ?? [],

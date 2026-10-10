@@ -222,7 +222,7 @@ export function useApiQuery<T>(
     const generation = generationRef.current
     releaseHeld()
     if (!enabled) {
-      setLoading(false)
+      setLoading(false) // eslint-disable-line react/set-state-in-effect -- 挂载/换 deps 同步落 loading 态
       return
     }
     setLoading(true)

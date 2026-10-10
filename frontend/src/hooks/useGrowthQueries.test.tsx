@@ -11,7 +11,7 @@ import {
   type GrowthStatus,
 } from '@/api/growth'
 import { fetchAccounts } from '@/api/overview'
-import { ApiKeyProvider } from '@/hooks/ApiKeyContext'
+import { ApiKeyProvider } from '@/hooks/ApiKeyProvider'
 import { useGrowthQueries } from '@/hooks/useGrowthQueries'
 
 vi.mock('@/api/growth', async (importOriginal) => {

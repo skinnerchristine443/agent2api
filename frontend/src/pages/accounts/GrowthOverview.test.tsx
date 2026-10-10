@@ -2,7 +2,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { I18nProvider } from '@/hooks/I18nContext'
+import { I18nProvider } from '@/hooks/I18nProvider'
 
 import { GrowthOverview } from './GrowthOverview'
 import { translate } from '@/i18n/messages'

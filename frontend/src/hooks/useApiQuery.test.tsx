@@ -5,7 +5,8 @@ import { createRoot } from 'react-dom/client'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError } from '@/api/client'
-import { ApiKeyProvider, useApiKey } from '@/hooks/ApiKeyContext'
+import { useApiKey } from '@/hooks/ApiKeyContext'
+import { ApiKeyProvider } from '@/hooks/ApiKeyProvider'
 import { useApiQuery, type ApiQueryResult } from '@/hooks/useApiQuery'
 import { API_KEY_STORAGE_KEY } from '@/lib/apiKeyStorage'
 

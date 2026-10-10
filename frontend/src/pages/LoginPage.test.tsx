@@ -3,9 +3,9 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ApiKeyProvider } from '@/hooks/ApiKeyContext'
-import { I18nProvider } from '@/hooks/I18nContext'
-import { OverviewProvider } from '@/hooks/OverviewContext'
+import { ApiKeyProvider } from '@/hooks/ApiKeyProvider'
+import { I18nProvider } from '@/hooks/I18nProvider'
+import { OverviewProvider } from '@/hooks/OverviewProvider'
 import { API_KEY_STORAGE_KEY } from '@/lib/apiKeyStorage'
 
 const overviewApi = vi.hoisted(() => ({

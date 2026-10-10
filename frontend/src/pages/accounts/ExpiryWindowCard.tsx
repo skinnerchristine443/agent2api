@@ -38,11 +38,13 @@ export function ExpiryWindowCard({ settings, saving, error, onSave, t }: Props) 
   // 仅在服务端值变化时用其重置草稿（加载 / 成功保存），使进行中的编辑
   // 不会被无关的 settings 更新覆盖。
   useEffect(() => {
+    // eslint-disable-next-line react/set-state-in-effect -- 服务端值变化即重置草稿
     if (settings) setPrimaryDraft(secondsToDaysInput(settings.expiry_window_seconds))
-  }, [storedPrimary]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [storedPrimary]) // eslint-disable-line react-hooks/exhaustive-deps -- 仅在 storedPrimary 变化时重置，刻意不依赖 settings
   useEffect(() => {
+    // eslint-disable-next-line react/set-state-in-effect -- 服务端值变化即重置草稿
     if (settings) setSecondaryDraft(secondsToDaysInput(settings.secondary_expiry_window_seconds))
-  }, [storedSecondary]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [storedSecondary]) // eslint-disable-line react-hooks/exhaustive-deps -- 仅在 storedSecondary 变化时重置，刻意不依赖 settings
 
   if (!settings) {
     return (

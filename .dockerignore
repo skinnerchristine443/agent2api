@@ -1,5 +1,7 @@
-# Keep in sync with .gitignore.
-# Build context is the repo root (see deploy/docker-compose.yml: context: ..).
+# 与 .gitignore 保持**超集**关系（非逐行同步）：凡「不该进版本库」的（机密 /
+# 本地文件）同样不该进构建上下文；此外还排除**构建产物与 VCS 元数据**——
+# .git、DB/日志、internal/webui/static（镜像内由 Dockerfile 从 fresh 前端构建
+# 重新生成）。构建上下文 = 仓库根（见 deploy/docker-compose.yml: context: ..）。
 
 # --- VCS metadata: MUST stay excluded from the build context ---
 .git

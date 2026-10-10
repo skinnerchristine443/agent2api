@@ -209,9 +209,12 @@ func (client *Client) GrowthStatus(ctx context.Context, accountID string) (Growt
 	return status, nil
 }
 
-// ClaimGrowthRewards 只执行幂等的成长中心领取：buddy 已到达时的 travel 奖励、
-// 已解锁任务的接受，以及已完成任务的奖励。它绝不触碰不可逆的路径（补签卡、兑换、
-// 抽奖、buddy open/depart、heatmap 写入）。
+// ClaimGrowthRewards 执行幂等的成长中心领取：先派猫出门（idle→traveling）、
+// 领已到达的 travel 奖励、接受已解锁任务、领已完成任务的奖励。
+//
+// 「派猫猫旅行」（depart）是幂等的状态机推进，不是不可逆消耗：上游在 traveling
+// 或已达每日上限时原样跳过，重复调用无副作用。本函数**绝不触碰真正不可逆的路径**
+// （补签卡、兑换、抽奖、heatmap 写入）。
 //
 // 某个区块的失败记录在 Errors 中，不会中断其它区块。它唯一返回的错误是凭据失败，
 // 因为那会同等阻断每个区块。

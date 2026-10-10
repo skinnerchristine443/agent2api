@@ -42,7 +42,7 @@ export function RenameAccountModal({ account, busy, t, onClose, onSave }: Props)
         <Modal.Container placement="center" size="sm">
           <Modal.Dialog className="sm:min-w-[24rem]">
             <Modal.Header className="items-start justify-between gap-4 px-6 pt-6">
-              <Modal.Heading className="text-lg font-semibold">{t('renameAccount')}</Modal.Heading>
+              <Modal.Heading className="text-xl font-semibold tracking-[-0.01em]">{t('renameAccount')}</Modal.Heading>
               <Modal.CloseTrigger isDisabled={busy} aria-label={t('close')} className="grid size-9 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-secondary">
                 <X size={18} />
               </Modal.CloseTrigger>

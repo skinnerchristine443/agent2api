@@ -28,7 +28,7 @@ export function LogsRuntimePage() {
   const { t } = useI18n()
   const { filters, patch, clear, hasFilters, search } = useRuntimeLogsFilters()
   const { query, items, total, page, size, pageCount, setPage, setSize } = useRuntimeLogsQuery(filters)
-  const { accountOptions } = useLogsFilterOptions()
+  const { accountOptions, accountNameById } = useLogsFilterOptions()
   const sheet = useSheetUrlParam('entry')
 
   const shownLabel = useMemo(() => t('logsShownTotal', {
@@ -121,6 +121,7 @@ export function LogsRuntimePage() {
           hasFilters={hasFilters}
           onOpenEntry={(id) => sheet.open(String(id))}
           onClearFilters={clear}
+          accountNameById={accountNameById}
         />
 
         <ListPager
@@ -143,6 +144,7 @@ export function LogsRuntimePage() {
         isOpen={sheet.isOpen}
         onOpenChange={sheet.onOpenChange}
         missing={sheet.isOpen && !selectedEntry && !query.loading}
+        accountNameById={accountNameById}
       />
     </div>
   )

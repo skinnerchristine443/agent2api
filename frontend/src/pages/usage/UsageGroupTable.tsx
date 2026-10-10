@@ -3,7 +3,7 @@ import { EmptyPanel } from '@/components/ui/EmptyPanel'
 import { useI18n } from '@/hooks/I18nContext'
 import { formatCompact } from '@/lib/format'
 
-import { formatSpeed, groupLabel } from './usageFormat'
+import { formatSpeed } from './usageFormat'
 
 /** 分组聚合表（按账号 / 按模型两张表共用同一形态）。 */
 export function UsageGroupTable({
@@ -11,14 +11,21 @@ export function UsageGroupTable({
   hint,
   empty,
   groups,
+  nameOf,
 }: {
   title: string
   hint: string
   empty: string
   groups: UsageStatsGroup[]
+  /** 分组键 → 展示名（仅「按账号」表需要：后端给的是账号 id，须映射成账号名）。 */
+  nameOf?: (key: string) => string
 }) {
   const { t } = useI18n()
-  const label = (key: string) => groupLabel(key, { unknown: t('statsUnknown'), unassigned: t('statsUnassigned') })
+  const label = (key: string) => {
+    if (key === '(unknown)') return t('statsUnknown')
+    if (key === '(unassigned)') return t('statsUnassigned')
+    return nameOf?.(key) ?? key
+  }
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-surface">
       <div className="border-b border-separator px-4 py-3">

@@ -18,13 +18,17 @@ export function RuntimeDetailSheet({
   isOpen,
   onOpenChange,
   missing,
+  accountNameById,
 }: {
   entry: RuntimeLogEntry | null
   isOpen: boolean
   onOpenChange: (isOpen: boolean) => void
   missing: boolean
+  /** 账号 id → 展示名（后端 account_id 是内部 id，须映射成账号名）。 */
+  accountNameById: Map<string, string>
 }) {
   const { t } = useI18n()
+  const accountLabel = entry?.account_id ? (accountNameById.get(entry.account_id) || entry.account_id) : '—'
 
   return (
     <Sheet
@@ -60,7 +64,7 @@ export function RuntimeDetailSheet({
             </div>
             <div>
               <dt className="text-micro text-muted">{t('logsColAccount')}</dt>
-              <dd className="mt-1 break-all text-sm font-medium">{entry.account_id || '—'}</dd>
+              <dd className="mt-1 break-all text-sm font-medium" title={entry.account_id || undefined}>{accountLabel}</dd>
             </div>
           </dl>
           <section className="space-y-2">

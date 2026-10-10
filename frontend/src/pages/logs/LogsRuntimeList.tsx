@@ -60,14 +60,18 @@ export function LogsRuntimeList({
   hasFilters,
   onOpenEntry,
   onClearFilters,
+  accountNameById,
 }: {
   items: RuntimeLogEntry[]
   loading: boolean
   hasFilters: boolean
   onOpenEntry: (id: number) => void
   onClearFilters: () => void
+  /** 账号 id → 展示名（后端 account_id 是内部 id，须映射成账号名）。 */
+  accountNameById: Map<string, string>
 }) {
   const { t } = useI18n()
+  const accountLabel = (id: string) => accountNameById.get(id) || id
 
   return (
     <Card data-gsap-reveal className="overflow-hidden p-0" aria-busy={loading}>
@@ -101,7 +105,7 @@ export function LogsRuntimeList({
                 <span className="font-medium text-muted">{entry.level}</span>
               </div>
               <div className="min-w-0">
-                {entry.account_id ? <div className="mono mb-1 text-micro text-muted">{entry.account_id}</div> : null}
+                {entry.account_id ? <div className="mono mb-1 text-micro text-muted" title={entry.account_id}>{accountLabel(entry.account_id)}</div> : null}
                 <div className="mono line-clamp-2 break-all text-xs leading-5 text-foreground">{entry.message}</div>
               </div>
               <CopyLineButton text={entry.message} label={t('logsCopyLine')} copiedLabel={t('logsCopied')} />

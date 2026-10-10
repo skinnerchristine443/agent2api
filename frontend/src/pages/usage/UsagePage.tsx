@@ -7,6 +7,7 @@ import { PageAlert } from '@/components/ui/PageAlert'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SkeletonBlock } from '@/components/ui/skeletons'
 import { UsageTrendChart } from '@/components/usage/UsageTrendChart'
+import { useAccountNameMap } from '@/hooks/useAccountNameMap'
 import { useI18n } from '@/hooks/I18nContext'
 import { useUsageStats } from '@/hooks/useUsageStats'
 
@@ -28,6 +29,10 @@ export function UsagePage() {
   const { t } = useI18n()
   const { window, days, setWindow } = useUsageWindow()
   const { data: stats, error, loading } = useUsageStats(days)
+  // 用量聚合按「账号内部 id」分组（后端 request_logs.account_id），这里统一映射成
+  // 账号名再展示——否则表格里看到的是一串 id 而不是用户设的名字。
+  const accountNameById = useAccountNameMap()
+  const accountName = (id: string) => accountNameById.get(id) || id
   const windowLabel = t(usageWindowLabelKey(window))
 
   return (
@@ -100,6 +105,7 @@ export function UsagePage() {
               hint={t('usageByAccountHint')}
               empty={t('usageEmptyAccounts')}
               groups={stats.accounts}
+              nameOf={accountName}
             />
           </div>
 
@@ -108,6 +114,7 @@ export function UsagePage() {
             hint={t('usageByModelAccountHint')}
             empty={t('usageEmptyModelAccounts')}
             rows={stats.model_accounts}
+            nameOf={accountName}
           />
         </>
       ) : null}

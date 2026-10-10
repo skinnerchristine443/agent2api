@@ -42,9 +42,20 @@ vi.mock('@/api/usage', () => ({
       },
     ],
     models: [{ key: 'glm-5.3', requests: 42, prompt_tokens: 1000, completion_tokens: 500, total_tokens: 1500, errors: 1, cache_read_tokens: 200, cache_hit_rate: 0.25, output_tokens_per_second: 12.5 }],
-    accounts: [{ key: '(unassigned)', requests: 42, prompt_tokens: 1000, completion_tokens: 500, total_tokens: 1500, errors: 1, cache_read_tokens: 200, cache_hit_rate: 0.25, output_tokens_per_second: 12.5 }],
-    model_accounts: [{ model: 'glm-5.3', account: '(unknown)', requests: 42, total_tokens: 1500, errors: 1, output_tokens_per_second: 12.5 }],
+    accounts: [
+      { key: 'acc-1', requests: 20, prompt_tokens: 500, completion_tokens: 200, total_tokens: 700, errors: 0, cache_read_tokens: 100, cache_hit_rate: 0.25, output_tokens_per_second: 12.5 },
+      { key: '(unassigned)', requests: 42, prompt_tokens: 1000, completion_tokens: 500, total_tokens: 1500, errors: 1, cache_read_tokens: 200, cache_hit_rate: 0.25, output_tokens_per_second: 12.5 },
+    ],
+    model_accounts: [
+      { model: 'glm-5.3', account: 'acc-1', requests: 20, total_tokens: 700, errors: 0, output_tokens_per_second: 12.5 },
+      { model: 'glm-5.3', account: '(unknown)', requests: 42, total_tokens: 1500, errors: 1, output_tokens_per_second: 12.5 },
+    ],
   })),
+}))
+
+// 账号名映射：mock hook 本身（而非经 pages/** 导入 @/api，遵守约定 ④）。
+vi.mock('@/hooks/useAccountNameMap', () => ({
+  useAccountNameMap: () => new Map([['acc-1', '毕祥']]),
 }))
 
 function renderPage(entry = '/usage') {
@@ -73,6 +84,9 @@ describe('UsagePage 渲染冒烟', () => {
     // 哨兵值 (unknown)/(unassigned) 已本地化
     expect(screen.getByText('未分配')).toBeTruthy()
     expect(screen.getByText('未知')).toBeTruthy()
+    // 账号 id 已映射成账号名（回归护栏：此前直接渲染 acc-1）
+    expect(screen.queryByText('acc-1')).toBeNull()
+    expect(screen.getAllByText('毕祥').length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: '1 天' })).toBeTruthy()
     expect(screen.getByRole('button', { name: '7 天' })).toBeTruthy()
     expect(screen.getByRole('button', { name: '30 天' })).toBeTruthy()

@@ -101,7 +101,7 @@ export function GrowthPage() {
                 size="sm"
                 variant="secondary"
                 isDisabled={!accountId}
-                isPending={queries.statusLoading}
+                isPending={queries.statusLoading || queries.statusRefreshing}
                 onPress={queries.reloadStatus}
               >
                 <ArrowClockwise size={15} />{t('refresh')}
@@ -179,7 +179,7 @@ export function GrowthPage() {
 
       {displayStatus ? (
         <>
-          <GrowthPanel status={displayStatus} t={t} />
+          <GrowthPanel status={displayStatus} t={t} onTravelAction={queries.travelAction} travelPending={queries.travelPending} />
 
           <GrowthClaimSection
             result={queries.claimResult}

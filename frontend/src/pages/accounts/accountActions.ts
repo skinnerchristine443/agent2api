@@ -47,6 +47,10 @@ export type AccountHandlers = {
   onViewCheckins: (id: string) => void
   /** 打开认证模态（认证方式列）。 */
   onToggleAuthPanel: (id: string) => void
+  /** ⋯ 菜单：打开重命名模态。 */
+  onRename: (id: string) => void
+  /** 重命名提交。 */
+  onSaveName: (id: string, name: string) => Promise<void>
 }
 
 /** useAsyncAction 的执行体：统一在途标记与失败文案（迁移前 run() 模式）。 */
@@ -190,5 +194,14 @@ export function createAccountHandlers({
     onViewModels: (id) => dispatch({ type: 'panel', panel: 'models', id }),
     onViewCheckins: (id) => dispatch({ type: 'panel', panel: 'checkins', id }),
     onToggleAuthPanel,
+    onRename: (id) => dispatch({ type: 'panel', panel: 'rename', id }),
+    onSaveName: async (id, name) => {
+      dispatch({ type: 'override', id, patch: { name } })
+      try {
+        await pool.saveSettings(id, { name })
+      } finally {
+        dispatch({ type: 'clearOverride', id })
+      }
+    },
   }
 }

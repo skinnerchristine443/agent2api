@@ -2,6 +2,7 @@ import { AccountCheckinRecordsModal } from '@/components/accounts/AccountCheckin
 import { AccountModelsModal } from '@/components/accounts/AccountModelsModal'
 import { AddAccountModal } from '@/components/accounts/add-account/AddAccountModal'
 import { AccountAuthModal } from '@/components/accounts/AccountAuthModal'
+import { RenameAccountModal } from '@/components/accounts/RenameAccountModal'
 import type { ProviderDescriptor } from '@/api/overview'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { Translate } from '@/i18n/messages'
@@ -50,6 +51,8 @@ export function AccountsModals({
   const confirmAccount = accountOf(panels.confirm)
   const modelsAccount = accountOf(panels.models)
   const checkinAccount = accountOf(panels.checkins)
+  const renameAccount = accountOf(panels.rename)
+  const renameId = panels.rename || ''
   const authAccount = accountOf(panels.auth)
   const authId = panels.auth || ''
   const authTransient = authId ? transients[authId] || {} : {}
@@ -91,6 +94,14 @@ export function AccountsModals({
         onCallbackChange={(value) => handlers.onCallbackChange(authId, value)}
         onSubmitCallback={() => handlers.onCallback(authId)}
         onClose={() => onClosePanel('auth')}
+      />
+      <RenameAccountModal
+        key={`rename:${panels.rename ?? 'closed'}`}
+        account={renameAccount}
+        busy={Boolean(busy && busy.id === renameId && busy.kind === 'settings')}
+        t={t}
+        onClose={() => onClosePanel('rename')}
+        onSave={(name) => handlers.onSaveName(renameId, name)}
       />
       <ConfirmDialog
         isOpen={Boolean(confirmAccount)}

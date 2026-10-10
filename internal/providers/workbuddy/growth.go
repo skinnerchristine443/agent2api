@@ -18,6 +18,8 @@ const (
 
 	pathGrowthTravelStatus = "/buddy/travel/status"
 	pathGrowthTravelClaim  = "/buddy/travel/claim"
+	pathGrowthTravelDepart = "/buddy/travel/depart"
+	pathGrowthTravelConfig = "/buddy/travel/config"
 	pathGrowthTasks        = "/tasks"
 	pathGrowthTasksAccept  = "/tasks/accept"
 	pathGrowthStreak       = "/streak"
@@ -36,6 +38,9 @@ const (
 
 // growthTravelArrived 是领取操作唯一可作用的 travel 状态。
 const growthTravelArrived = "arrived"
+
+// growthTravelIdle 是"可派出"的状态：猫在家、今日未达上限。
+const growthTravelIdle = "idle"
 
 // growthAcceptBatchLimit 限定单次 accept 调用能携带多少个 task code。
 const growthAcceptBatchLimit = 20
@@ -216,6 +221,8 @@ func (client *Client) ClaimGrowthRewards(ctx context.Context, accountID string) 
 		return GrowthClaimResult{}, err
 	}
 	var result GrowthClaimResult
+	// 先派（idle→traveling），再领（arrived→claim）；上游状态机保证幂等。
+	client.departGrowthTravel(ctx, accountID, credential, &result)
 	client.claimGrowthTravel(ctx, accountID, credential, &result)
 	client.claimGrowthTasks(ctx, accountID, credential, &result)
 	return result, nil
@@ -566,6 +573,91 @@ func growthTravelClaimBody(recordID json.RawMessage) ([]byte, error) {
 		return nil, fmt.Errorf("travel record id is not valid json")
 	}
 	return json.Marshal(map[string]json.RawMessage{"record_id": recordID})
+}
+
+// growthTravelDepartBody 构造派出旅行的请求体。上游按 location_id 选地点。
+func growthTravelDepartBody(locationID int) ([]byte, error) {
+	if locationID <= 0 {
+		locationID = defaultTravelLocationID
+	}
+	return json.Marshal(map[string]int{"location_id": locationID})
+}
+
+// defaultTravelLocationID 是 config 拉取失败时的兜底地点（咖啡馆）。
+const defaultTravelLocationID = 1
+
+// pickTravelLocation 从 config 里挑一个地点 id；失败回落到默认。
+func (client *Client) pickTravelLocation(ctx context.Context, accountID string, credential Credential) int {
+	raw, err := client.growthRead(ctx, accountID, credential, pathGrowthTravelConfig)
+	if err != nil {
+		return defaultTravelLocationID
+	}
+	var payload struct {
+		Locations []struct {
+			ID json.RawMessage `json:"id"`
+		} `json:"locations"`
+	}
+	if json.Unmarshal(raw, &payload) != nil || len(payload.Locations) == 0 {
+		return defaultTravelLocationID
+	}
+	if v, ok := rawFloat(payload.Locations[0].ID); ok && v > 0 {
+		return int(v)
+	}
+	return defaultTravelLocationID
+}
+
+// departGrowthTravel 在猫空闲且今日未达上限时派它出门旅行。
+//
+// 这是「派猫猫旅行」闭环里此前缺失的一环：本仓原先只做了 status + claim，
+// 从未派出 ⇒ 猫永远停在 idle，claim 无事可领、前端也看不到进度。上游状态机
+// 是幂等权威：traveling 时绝不重复派、daily_limit_reached 时跳过。
+func (client *Client) departGrowthTravel(ctx context.Context, accountID string, credential Credential, result *GrowthClaimResult) {
+	raw, err := client.growthRead(ctx, accountID, credential, pathGrowthTravelStatus)
+	if err != nil {
+		result.Errors = append(result.Errors, "travel status: "+err.Error())
+		return
+	}
+	travel, err := parseGrowthTravelState(raw)
+	if err != nil {
+		result.Errors = append(result.Errors, "travel status: "+err.Error())
+		return
+	}
+	status := travel.status()
+	if status.DailyLimitReached {
+		result.Outcomes = append(result.Outcomes, GrowthClaimOutcome{
+			Target: "travel", Action: "depart", Status: GrowthClaimSkipped, Message: "daily limit reached",
+		})
+		return
+	}
+	// 只有 idle（非 traveling / arrived）才派；其余状态原样跳过。
+	if status.State != growthTravelIdle && status.State != "" {
+		result.Outcomes = append(result.Outcomes, GrowthClaimOutcome{
+			Target: "travel", Action: "depart", Status: GrowthClaimSkipped, Message: status.State,
+		})
+		return
+	}
+	locationID := client.pickTravelLocation(ctx, accountID, credential)
+	payload, err := growthTravelDepartBody(locationID)
+	if err != nil {
+		result.Errors = append(result.Errors, "travel depart: "+err.Error())
+		return
+	}
+	call, err := client.growthPost(ctx, accountID, credential, pathGrowthTravelDepart, payload)
+	if err != nil {
+		result.Outcomes = append(result.Outcomes, GrowthClaimOutcome{
+			Target: "travel", Action: "depart", Status: GrowthClaimFailed, Message: err.Error(),
+		})
+		return
+	}
+	if call.alreadyClaimed() {
+		result.Outcomes = append(result.Outcomes, GrowthClaimOutcome{
+			Target: "travel", Action: "depart", Status: GrowthClaimAlreadyClaimed,
+		})
+		return
+	}
+	result.Outcomes = append(result.Outcomes, GrowthClaimOutcome{
+		Target: "travel", Action: "depart", Status: GrowthClaimSuccess,
+	})
 }
 
 func (client *Client) claimGrowthTravel(ctx context.Context, accountID string, credential Credential, result *GrowthClaimResult) {

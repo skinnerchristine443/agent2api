@@ -39,6 +39,7 @@ func (manager *Manager) evaluateQuotaAlerts(ctx context.Context) {
 			}
 			manager.quotaAlertLogged[key] = now
 			log.Printf("quota alert %s account=%s name=%s: %s", alert.Category, alert.AccountID, alert.AccountName, alert.Message)
+			manager.notifyWebhook(alert)
 		}
 	}
 	// 遗忘告警已清除的条目，使下次触发能再次记录。

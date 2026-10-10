@@ -38,6 +38,8 @@ export type GrowthQueries = {
   providersReady: boolean
   status: GrowthStatus | null
   statusLoading: boolean
+  /** 静默刷新（手动刷新按钮）在途——silent 模式不置 loading，须用它做 pending。 */
+  statusRefreshing: boolean
   /** 非降级类失败的文案（降级时由 `degrade` 表达，不重复报错）。 */
   statusError: string | null
   observations: GrowthObservation[]
@@ -53,12 +55,16 @@ export type GrowthQueries = {
   /** 跨账号任务领取总览（每个账号只读一次任务清单）。 */
   overview: GrowthOverviewRow[]
   overviewLoading: boolean
+  overviewRefreshing: boolean
   overviewError: string | null
   reloadOverview: () => void
   /** 一键领取总览里所有「可领 > 0」的账号，返回逐账号结果。 */
   claimAllClaimable: () => void
   claimAllPending: boolean
   claimAllResult: { success: number; already: number } | null
+  /** 派猫猫旅行 / 领取礼物（调用同一幂等领取端点，然后刷新）。 */
+  travelAction: () => void
+  travelPending: boolean
 }
 
 /**
@@ -158,6 +164,7 @@ export function useGrowthQueries(accountId: string): GrowthQueries {
     providersReady: providersQuery.data !== null,
     status: active ? statusQuery.data : null,
     statusLoading: active ? statusQuery.loading : false,
+    statusRefreshing: active ? statusQuery.refreshing : false,
     statusError: active && !degrade ? statusQuery.error : null,
     observations: active ? (observationsQuery.data?.data ?? []) : [],
     observationsLoading: active ? observationsQuery.loading : false,
@@ -170,10 +177,13 @@ export function useGrowthQueries(accountId: string): GrowthQueries {
     reloadStatus: () => void statusQuery.refresh(),
     overview: overviewQuery.data?.rows ?? [],
     overviewLoading: overviewQuery.loading,
+    overviewRefreshing: overviewQuery.refreshing,
     overviewError: overviewQuery.error,
     reloadOverview: () => void overviewQuery.refresh(),
     claimAllClaimable: () => void claimAllAction.run(),
     claimAllPending: claimAllAction.pending,
     claimAllResult,
+    travelAction: () => void claimAction.run(),
+    travelPending: claimAction.pending,
   }
 }

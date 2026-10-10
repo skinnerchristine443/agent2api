@@ -297,6 +297,29 @@ func (manager *Manager) KeepaliveWorkBuddy(ctx context.Context, onlyOptIn bool) 
 	}
 }
 
+// keepaliveConfig 读取保活开关与本地时刻。缺省 = 开启、22:00（与旧硬编码一致）。
+func (manager *Manager) keepaliveConfig(ctx context.Context) (bool, string, error) {
+	store := manager.store
+	if store == nil {
+		return true, accounts.DefaultKeepaliveTime, nil
+	}
+	enabled := true
+	if raw, ok, err := store.GetSecret(ctx, accounts.KeepaliveEnabledSecret); err != nil {
+		return false, "", err
+	} else if ok {
+		enabled = strings.TrimSpace(raw) != "0"
+	}
+	at := accounts.DefaultKeepaliveTime
+	if raw, ok, err := store.GetSecret(ctx, accounts.KeepaliveTimeSecret); err != nil {
+		return false, "", err
+	} else if ok && strings.TrimSpace(raw) != "" {
+		if normalized, err := accounts.NormalizeKeepaliveTime(raw); err == nil {
+			at = normalized
+		}
+	}
+	return enabled, at, nil
+}
+
 func (manager *Manager) RunMaintenanceLoop(stop <-chan struct{}) {
 	ctx, cancel := context.WithCancel(manager.runCtx)
 	defer cancel()
@@ -332,12 +355,12 @@ func (manager *Manager) runMaintenanceTick(ctx context.Context, now time.Time, l
 		manager.runScheduledCheckins(ctx, now)
 		// 冷账号补探：开机时全部账号都没有健康判定，只会主动探测补齐。
 		manager.ProbeColdAccounts(ctx)
-		day := now.Format("2006-01-02")
-		if now.Hour() >= 22 && *lastKeepaliveDay != day {
+		// 保活：开关 + 本地时刻均可配（设置 › 签到）。旧行为 = 22:00 一次性。
+		if enabled, at, err := manager.keepaliveConfig(ctx); err == nil && enabled && accounts.KeepaliveDue(now, at, *lastKeepaliveDay) {
 			keepaliveCtx, stopKeepalive := context.WithTimeout(ctx, 2*time.Minute)
 			manager.KeepaliveWorkBuddy(keepaliveCtx, true)
 			stopKeepalive()
-			*lastKeepaliveDay = day
+			*lastKeepaliveDay = now.Format("2006-01-02")
 		}
 	}
 	manager.sampleResources()

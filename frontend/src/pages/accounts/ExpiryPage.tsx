@@ -74,7 +74,7 @@ export function ExpiryPage() {
           className="border-b border-separator pb-6"
           description={t('pageDescExpiry')}
           actions={(
-            <Button size="sm" variant="secondary" onPress={queries.reload}>
+            <Button size="sm" variant="secondary" isPending={queries.reloading} onPress={queries.reload}>
               <ArrowClockwise size={15} />{t('refresh')}
             </Button>
           )}

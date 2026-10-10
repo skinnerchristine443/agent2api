@@ -21,6 +21,7 @@ const (
 	secondaryExpiryWindowSecret   = "secondary_expiry_window_seconds"
 	proxyURLSecret                = "proxy_url"
 	checkinDisabledAccountsSecret = accounts.CheckinDisabledAccountsSecret
+	proxyWebhookURLSecret         = "webhook_url"
 )
 
 // EnsureProxyURL 解析全局出站代理，并在首次启动时从环境变量播种。该全局值会被

@@ -16,8 +16,10 @@ export type ExpiryQueries = {
   /** 上一次单账号刷新失败的文案（新一次刷新开始时清空）。 */
   refreshError: string | null
   refreshAccountQuota: (id: string) => void
-  /** 重新取数与设置（页头刷新按钮）。 */
+  /** 页头刷新按钮：向所有展示账号拉取最新额度（上游）+ 重读设置。 */
   reload: () => void
+  /** 页头刷新是否在途（按钮 pending 反馈）。 */
+  reloading: boolean
   savingWindow: boolean
   saveWindowError: string | null
   saveWindow: (primarySeconds: number, secondarySeconds: number) => void
@@ -41,6 +43,17 @@ export function useExpiryQueries(): ExpiryQueries {
 
   const reloadAccounts = accountsQuery.refresh
   const reloadSettings = settingsQuery.refresh
+  // 页头「刷新」= 真正向上游拉额度（逐账号 POST /refresh?quota=1），而不是
+  // 仅重读本地库——否则数据不变、按钮看起来「没反应」。并发上限 4。
+  const reloadAllAction = useAsyncAction(async () => {
+    const ids = (accountsQuery.data?.data ?? []).map((account) => account.id)
+    for (let start = 0; start < ids.length; start += 4) {
+      const batch = ids.slice(start, start + 4)
+      await Promise.all(batch.map((id) => refreshAccount(id, { quota: true }).catch(() => {})))
+    }
+    await reloadAccounts()
+    await reloadSettings()
+  })
   const refreshAction = useAsyncAction(async (id: string) => {
     setRefreshingId(id)
     try {
@@ -66,10 +79,8 @@ export function useExpiryQueries(): ExpiryQueries {
     refreshingId,
     refreshError: refreshAction.error,
     refreshAccountQuota: (id) => void refreshAction.run(id),
-    reload: () => {
-      void reloadAccounts()
-      void reloadSettings()
-    },
+    reload: () => void reloadAllAction.run(),
+    reloading: reloadAllAction.pending,
     savingWindow: saveAction.pending,
     saveWindowError: saveAction.error,
     saveWindow: (primarySeconds, secondarySeconds) => void saveAction.run(primarySeconds, secondarySeconds),

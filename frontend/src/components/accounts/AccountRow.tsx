@@ -9,6 +9,7 @@ import {
   DotsThreeVertical,
   Key,
   ListBullets,
+  PencilSimple,
   TrashSimple,
   WarningCircle,
 } from '@phosphor-icons/react'
@@ -56,6 +57,8 @@ type Props = {
   onCheckin?: () => void
   onViewCheckins?: () => void
   onClearCooldowns?: () => void
+  /** ⋯ 菜单：重命名（编辑弹窗移除后唯一的改名入口）。 */
+  onRename?: () => void
   /** 认证方式列：点击打开认证模态（设备登录 / PAT / 回调）。 */
   onToggleAuthPanel?: () => void
   onPriorityChange?: (priority: number) => void
@@ -114,6 +117,7 @@ export function AccountRowItem({
   onCheckin,
   onViewCheckins,
   onClearCooldowns,
+  onRename,
   onToggleAuthPanel,
   onPriorityChange,
   onViewModels,
@@ -322,6 +326,7 @@ export function AccountRowItem({
                   if (key === 'cooldowns') onClearCooldowns?.()
                   if (key === 'export') onExport()
                   if (key === 'checkins') onViewCheckins?.()
+                  if (key === 'rename') onRename?.()
                 }}
               >
                 <Dropdown.Item id="models" textValue={t('accountModels')}><Cube size={15} />{t('accountModels')}</Dropdown.Item>
@@ -330,6 +335,7 @@ export function AccountRowItem({
                 ) : null}
                 {account.auth_type !== 'none' ? <Dropdown.Item id="export" textValue={t('export')}><Copy size={15} />{t('export')}</Dropdown.Item> : null}
                 {onViewCheckins ? <Dropdown.Item id="checkins" textValue={t('checkinRecords')}><ListBullets size={15} />{t('checkinRecords')}</Dropdown.Item> : null}
+                {onRename ? <Dropdown.Item id="rename" textValue={t('renameAccount')}><PencilSimple size={15} />{t('renameAccount')}</Dropdown.Item> : null}
               </Dropdown.Menu>
             </Dropdown.Popover>
           </Dropdown>

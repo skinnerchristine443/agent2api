@@ -36,6 +36,11 @@ type SystemSettingsPatch struct {
 	// AccountDefaults 是「渠道 × 区域」级账号默认的局部覆盖：键为
 	// `provider.region`，值为该组合的完整默认（缺省组合保持已存值）。
 	AccountDefaults map[string]accounts.AccountDefaults `json:"account_defaults"`
+	// Keepalive 是保活开关与本地时刻（全局）。
+	KeepaliveEnabled *bool   `json:"keepalive_enabled"`
+	KeepaliveTime    *string `json:"keepalive_time"`
+	// WebhookURL 是告警通知出口（空 = 关闭）。
+	WebhookURL *string `json:"webhook_url"`
 }
 type SystemSettings struct {
 	CrossProviderModelPool       bool                              `json:"cross_provider_model_pool"`
@@ -49,9 +54,12 @@ type SystemSettings struct {
 	CheckinTimes                 map[string]string                 `json:"checkin_times"`
 	CheckinWindows               map[string]accounts.CheckinWindow `json:"checkin_windows"`
 	// AccountDefaults 键为 `provider.region`，覆盖全部已注册的渠道 × 区域组合。
-	AccountDefaults map[string]accounts.AccountDefaults `json:"account_defaults"`
-	Timezone        string                              `json:"timezone"`
-	SessionAffinity executor.SessionAffinityStats       `json:"session_affinity"`
+	AccountDefaults  map[string]accounts.AccountDefaults `json:"account_defaults"`
+	KeepaliveEnabled bool                                `json:"keepalive_enabled"`
+	KeepaliveTime    string                              `json:"keepalive_time"`
+	WebhookURL       string                              `json:"webhook_url"`
+	Timezone         string                              `json:"timezone"`
+	SessionAffinity  executor.SessionAffinityStats       `json:"session_affinity"`
 }
 
 func (h *System) Current(ctx context.Context) SystemSettings {
@@ -75,6 +83,24 @@ func (h *System) Current(ctx context.Context) SystemSettings {
 		CheckinWindows:          map[string]accounts.CheckinWindow{},
 		AccountDefaults:         map[string]accounts.AccountDefaults{},
 		Timezone:                time.Now().Format("MST -07:00"),
+	}
+	// 保活开关与时刻（缺省 = 开启 / 22:00）。
+	settings.KeepaliveEnabled = true
+	settings.KeepaliveTime = accounts.DefaultKeepaliveTime
+	if h.Settings != nil {
+		if raw, ok, err := h.Settings.GetSecret(ctx, accounts.KeepaliveEnabledSecret); err == nil && ok {
+			settings.KeepaliveEnabled = strings.TrimSpace(raw) != "0"
+		}
+		if raw, ok, err := h.Settings.GetSecret(ctx, accounts.KeepaliveTimeSecret); err == nil && ok {
+			if normalized, err := accounts.NormalizeKeepaliveTime(raw); err == nil {
+				settings.KeepaliveTime = normalized
+			}
+		}
+	}
+	if h.Settings != nil {
+		if raw, ok, err := h.Settings.GetSecret(ctx, proxyWebhookURLSecret); err == nil && ok {
+			settings.WebhookURL = proxy.Redact(raw)
+		}
 	}
 	// 渠道级账号默认：按注册表枚举「渠道 × 区域」，逐个解析（缺省回落到内置默认）。
 	for _, descriptor := range providers.List() {
@@ -117,7 +143,7 @@ func (h *System) Current(ctx context.Context) SystemSettings {
 }
 
 func (h *System) Patch(ctx context.Context, input SystemSettingsPatch) error {
-	if input.CrossProviderModelPool == nil && input.CheckinDisabledAccounts == nil && input.RoutingStrategy == nil && input.RatePreference == nil && input.ExpiryWindowSeconds == nil && input.SecondaryExpiryWindowSeconds == nil && input.ProxyURL == nil && input.WorkBuddyCheckinTime == nil && len(input.CheckinTimes) == 0 && len(input.CheckinWindows) == 0 && len(input.AccountDefaults) == 0 {
+	if input.CrossProviderModelPool == nil && input.CheckinDisabledAccounts == nil && input.RoutingStrategy == nil && input.RatePreference == nil && input.ExpiryWindowSeconds == nil && input.SecondaryExpiryWindowSeconds == nil && input.ProxyURL == nil && input.WorkBuddyCheckinTime == nil && len(input.CheckinTimes) == 0 && len(input.CheckinWindows) == 0 && len(input.AccountDefaults) == 0 && input.KeepaliveEnabled == nil && input.KeepaliveTime == nil && input.WebhookURL == nil {
 		return operationError("invalid_request", "a system setting is required")
 	}
 	if input.ExpiryWindowSeconds != nil && *input.ExpiryWindowSeconds < 0 {
@@ -287,6 +313,40 @@ func (h *System) Patch(ctx context.Context, input SystemSettingsPatch) error {
 			return operationError("invalid_account_defaults", err.Error())
 		}
 		if err := h.Settings.SetSecret(ctx, accounts.AccountDefaultsSecret(providerID, regionID), accounts.EncodeAccountDefaults(normalized)); err != nil {
+			return operationError("system_settings_save_failed", err.Error())
+		}
+	}
+	if input.WebhookURL != nil {
+		existing, _, err := h.Settings.GetSecret(ctx, proxyWebhookURLSecret)
+		if err != nil {
+			return operationError("system_settings_read_failed", err.Error())
+		}
+		url := proxy.Preserve(existing, *input.WebhookURL)
+		url = strings.TrimSpace(url)
+		if url != "" {
+			if _, err := proxy.Parse(url); err != nil {
+				return operationError("invalid_request", "invalid webhook_url: "+err.Error())
+			}
+		}
+		if err := h.Settings.SetSecretOrEmpty(ctx, proxyWebhookURLSecret, url); err != nil {
+			return operationError("system_settings_save_failed", err.Error())
+		}
+	}
+	if input.KeepaliveEnabled != nil {
+		value := "0"
+		if *input.KeepaliveEnabled {
+			value = "1"
+		}
+		if err := h.Settings.SetSecret(ctx, accounts.KeepaliveEnabledSecret, value); err != nil {
+			return operationError("system_settings_save_failed", err.Error())
+		}
+	}
+	if input.KeepaliveTime != nil {
+		normalized, err := accounts.NormalizeKeepaliveTime(*input.KeepaliveTime)
+		if err != nil {
+			return operationError("invalid_request", err.Error())
+		}
+		if err := h.Settings.SetSecret(ctx, accounts.KeepaliveTimeSecret, normalized); err != nil {
 			return operationError("system_settings_save_failed", err.Error())
 		}
 	}

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Chip } from '@heroui/react'
+import { Button, Chip } from '@heroui/react'
 
 import type { GrowthStatus, GrowthTask } from '@/api/growth'
 import { SectionCard } from '@/components/ui/SectionCard'
@@ -74,7 +74,7 @@ function Heatmap({ cells, t }: { cells: GrowthStatus['heatmap']['cells']; t: Tra
 
 /** 成长面板：Travel / 任务 / 连登 / 能量 —— 每区块独立容错（自带 Err）。
  *  热力图已拆为独立卡片（`GrowthHeatmap`，批次 7：领取按钮置其正上方）。 */
-export function GrowthPanel({ status, t }: { status: GrowthStatus; t: Translate }) {
+export function GrowthPanel({ status, t, onTravelAction, travelPending }: { status: GrowthStatus; t: Translate; onTravelAction?: () => void; travelPending?: boolean }) {
   const travel = status.travel || {}
   const streak = status.streak
   const energy = status.energy
@@ -90,6 +90,14 @@ export function GrowthPanel({ status, t }: { status: GrowthStatus; t: Translate 
           {travelIdle ? <span className="text-xs text-muted">{t('growthTravelIdle')}</span> : null}
         </div>
         {travel.record_id ? <div className="mono mt-2 truncate text-micro text-muted" title={travel.record_id}>{travel.record_id}</div> : null}
+        {/* 派猫猫旅行：idle 时"派出"、arrived 时"领取礼物"（同一幂等领取端点）。 */}
+        {onTravelAction && !travel.daily_limit_reached ? (
+          <div className="mt-3">
+            <Button size="sm" variant="secondary" isPending={travelPending} onPress={onTravelAction}>
+              {travel.available ? t('growthTravelClaimGift') : t('growthTravelDepart')}
+            </Button>
+          </div>
+        ) : null}
       </Block>
 
       <Block title={t('growthBlockTasks')} hint={t('growthBlockTasksHint')} error={status.tasks_error} t={t}>

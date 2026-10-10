@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { AccountDefaultsCard } from '@/components/system/AccountDefaultsCard'
+import { RuntimeNoticesCard } from '@/components/system/RuntimeNoticesCard'
 import { CheckinDefaults } from '@/components/system/CheckinDefaults'
 import { PageAlert } from '@/components/ui/PageAlert'
 import { SkeletonBlock } from '@/components/ui/skeletons'
@@ -27,6 +28,7 @@ export function SettingsCheckin() {
   return (
     <div className="space-y-5">
       {error ? <PageAlert title={error} /> : null}
+      <RuntimeNoticesCard settings={settings} onSaved={config.setSettings} />
       <AccountDefaultsCard settings={settings} onSaved={config.setSettings} />
       <CheckinDefaults settings={settings} onSaved={config.setSettings} />
     </div>

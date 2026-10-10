@@ -250,7 +250,7 @@ func TestClaimGrowthTasksAcceptsUnlockedAndClaimsCompleted(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case pathGrowthRoot + pathGrowthTravelStatus:
-			_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{"state": "idle"}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{"state": "traveling"}})
 		case pathGrowthRoot + pathGrowthTasks:
 			_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{"tasks": []map[string]any{
 				{"task_code": "t-accept", "accept_status": "not_accepted", "locked": false},
@@ -399,7 +399,7 @@ func TestClaimGrowthBatchesAcceptAtLimit(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case pathGrowthRoot + pathGrowthTravelStatus:
-			_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{"state": "idle"}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{"state": "traveling"}})
 		case pathGrowthRoot + pathGrowthTasks:
 			_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{"tasks": tasks}})
 		case pathGrowthRoot + pathGrowthTasksAccept:
@@ -557,5 +557,86 @@ func TestGrowthAcceptStatusMapping(t *testing.T) {
 		if got := growthAcceptStatus(tc.status, ""); got != tc.want {
 			t.Fatalf("status %q -> %q, want %q", tc.status, got, tc.want)
 		}
+	}
+}
+
+// 派猫猫旅行：idle 且未达上限时必须先 depart，再 claim。此前本仓缺 depart，
+// 猫永远 idle、claim 无事可领（前端因此看不到进度）。
+func TestClaimGrowthDepartsIdleTravel(t *testing.T) {
+	var departBody string
+	departCount := 0
+	client, store := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case pathGrowthRoot + pathGrowthTravelStatus:
+			_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{"state": "idle", "daily_limit_reached": false}})
+		case pathGrowthRoot + pathGrowthTravelConfig:
+			_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{"locations": []map[string]any{{"id": 3, "code": "mall"}}}})
+		case pathGrowthRoot + pathGrowthTravelDepart:
+			departCount++
+			departBody = recordGrowthRequest(r).body
+			_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{"state": "traveling"}})
+		case pathGrowthRoot + pathGrowthTasks:
+			_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{"tasks": []map[string]any{}}})
+		case pathGrowthRoot + pathGrowthTravelClaim:
+			_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{}})
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	store.region = "cn"
+	saveCNCredential(t, store, "acc1")
+
+	result, err := client.ClaimGrowthRewards(context.Background(), "acc1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if departCount != 1 {
+		t.Fatalf("idle 猫必须派出一次，depart=%d", departCount)
+	}
+	if !strings.Contains(departBody, `"location_id":3`) {
+		t.Fatalf("depart 必须带 config 选中的地点：%s", departBody)
+	}
+	if outcome := growthOutcome(t, result, "travel", "depart"); outcome.Status != GrowthClaimSuccess {
+		t.Fatalf("depart outcome=%+v", outcome)
+	}
+}
+
+// traveling 或已达上限时绝不重复派出。
+func TestClaimGrowthSkipsDepartWhenTravelingOrCapped(t *testing.T) {
+	for _, state := range []struct {
+		name string
+		body map[string]any
+	}{
+		{"traveling", map[string]any{"state": "traveling"}},
+		{"daily_limit_reached", map[string]any{"state": "idle", "daily_limit_reached": true}},
+	} {
+		t.Run(state.name, func(t *testing.T) {
+			departs := 0
+			client, store := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch r.URL.Path {
+				case pathGrowthRoot + pathGrowthTravelStatus:
+					_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": state.body})
+				case pathGrowthRoot + pathGrowthTravelDepart:
+					departs++
+					_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{}})
+				case pathGrowthRoot + pathGrowthTasks:
+					_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{"tasks": []map[string]any{}}})
+				case pathGrowthRoot + pathGrowthTravelClaim:
+					_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "data": map[string]any{}})
+				default:
+					t.Fatalf("unexpected path %s", r.URL.Path)
+				}
+			}))
+			store.region = "cn"
+			saveCNCredential(t, store, "acc1")
+			if _, err := client.ClaimGrowthRewards(context.Background(), "acc1"); err != nil {
+				t.Fatal(err)
+			}
+			if departs != 0 {
+				t.Fatalf("%s 时不应派出，departs=%d", state.name, departs)
+			}
+		})
 	}
 }

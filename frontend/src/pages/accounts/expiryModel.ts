@@ -52,10 +52,21 @@ export type ExpiryRow = {
   region: string
   /** 最早的包过期时刻（Unix 秒）；0 = 该渠道未上报。 */
   expiresAt: number
+  /**
+   * 最早那批包的剩余（= 后端 `quota.expiring_remain`）。**仅用于行内展示与
+   * 分组依据**，不可用作窗口金额合计——它是「路由用」的紧迫额度口径，
+   * 一个账号往往有数十个不同到期时间的包，这里只取最早一批。
+   */
   expiringRemain: number
   unit: string
   packages: AccountQuotaPackage[]
   group: ExpiryGroupKey
+  /**
+   * 逐包按窗口归桶后的剩余合计（金额口径修正）：`primary` = 0..primaryEnd、
+   * `secondary` = primaryEnd..secondaryEnd、`later` = 更远。仅计 `remain > 0`
+   * 且 `ends_at > 0` 的包；窗口未启用（主窗口=0）时三者归入 later。
+   */
+  amounts: { primary: number; secondary: number; later: number }
 }
 
 export type UnitTotal = { unit: string; amount: number }
@@ -81,6 +92,7 @@ export function expiryRowsFor(
   const nowSeconds = Math.floor(windows.nowMs / 1000)
   const primaryEnd = nowSeconds + Math.max(0, windows.primarySeconds)
   const secondaryEnd = nowSeconds + Math.max(0, windows.secondarySeconds)
+  const windowsEnabled = windows.primarySeconds > 0
 
   const rows = accounts.map((account): ExpiryRow => {
     const quota = account.quota
@@ -95,6 +107,27 @@ export function expiryRowsFor(
       else if (expiresAt <= secondaryEnd) group = 'secondary'
       else group = 'later'
     }
+
+    // 金额口径修正：逐包按 ends_at 归桶（而非只取最早一批）。已过期（ends_at
+    // <= now）的包不计入任何窗口——它不再提供可用额度；remain<=0 的包同理
+    // （已耗尽）。账号分组仍按最早包判定（决定「这个账号最紧迫的额度何时到期」）。
+    const packages = quota?.packages ?? []
+    const amounts = { primary: 0, secondary: 0, later: 0 }
+    for (const pkg of packages) {
+      const endsAt = Number(pkg?.ends_at || 0)
+      const remain = Number(pkg?.remain || 0)
+      if (!(remain > 0) || !(endsAt > nowSeconds)) continue
+      if (!windowsEnabled) {
+        amounts.later += remain
+      } else if (endsAt <= primaryEnd) {
+        amounts.primary += remain
+      } else if (endsAt <= secondaryEnd) {
+        amounts.secondary += remain
+      } else {
+        amounts.later += remain
+      }
+    }
+
     return {
       id: account.id,
       name: account.name || account.id,
@@ -103,8 +136,9 @@ export function expiryRowsFor(
       expiresAt: reported ? expiresAt : 0,
       expiringRemain: Number(quota?.expiring_remain || 0),
       unit: quota?.unit || '',
-      packages: quota?.packages ?? [],
+      packages,
       group,
+      amounts,
     }
   })
 
@@ -130,25 +164,41 @@ export function groupExpiryRows(rows: ExpiryRow[]): Record<ExpiryGroupKey, Expir
   return groups
 }
 
-/** 按单位分别求和：不同渠道的单位不同（credits / 次），不能跨单位相加。 */
-export function sumByUnit(rows: ExpiryRow[]): UnitTotal[] {
+/**
+ * 按单位分别求和：不同渠道的单位不同（credits / 次），不能跨单位相加。
+ *
+ * `bucket` 指定取哪个窗口的金额（`primary` / `secondary` / `later`）。
+ */
+export function sumByUnit(rows: ExpiryRow[], bucket: 'primary' | 'secondary' | 'later'): UnitTotal[] {
   const totals = new Map<string, number>()
   for (const row of rows) {
-    if (!(row.expiringRemain > 0)) continue
-    totals.set(row.unit, (totals.get(row.unit) || 0) + row.expiringRemain)
+    const amount = row.amounts[bucket]
+    if (!(amount > 0)) continue
+    totals.set(row.unit, (totals.get(row.unit) || 0) + amount)
   }
   return [...totals.entries()]
     .map(([unit, amount]) => ({ unit, amount }))
     .sort((left, right) => right.amount - left.amount || left.unit.localeCompare(right.unit))
 }
 
+/**
+ * 窗口计数：`bucket` 与金额同源。`primary` / `secondary` / `later` 计
+ * **有包落在该窗口**的账号数（一个账号可同时出现在多个窗口——例如既有 2 天内
+ * 到期的包、又有 5 天内到期的包）；`unreported` 沿用分组计数。
+ */
+function countInBucket(rows: ExpiryRow[], bucket: 'primary' | 'secondary' | 'later'): number {
+  let count = 0
+  for (const row of rows) if (row.amounts[bucket] > 0) count += 1
+  return count
+}
+
 export function summarizeExpiry(rows: ExpiryRow[]): ExpirySummary {
-  const groups = groupExpiryRows(rows)
+  const unreported = rows.filter((row) => row.group === 'unreported').length
   return {
-    primary: { count: groups.primary.length, totals: sumByUnit(groups.primary) },
-    secondary: { count: groups.secondary.length, totals: sumByUnit(groups.secondary) },
-    later: { count: groups.later.length, totals: sumByUnit(groups.later) },
-    unreported: { count: groups.unreported.length },
+    primary: { count: countInBucket(rows, 'primary'), totals: sumByUnit(rows, 'primary') },
+    secondary: { count: countInBucket(rows, 'secondary'), totals: sumByUnit(rows, 'secondary') },
+    later: { count: countInBucket(rows, 'later'), totals: sumByUnit(rows, 'later') },
+    unreported: { count: unreported },
   }
 }
 

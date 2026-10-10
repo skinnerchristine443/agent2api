@@ -56,12 +56,12 @@ export function ExpirySummaryBar({ rows, sortDisabled, t }: {
         />
       ) : null}
       <SectionCard className="flex-1" title={t('expirySummaryTitle')} hint={t('expirySummaryHint')}>
-        {/* 表头（≥640px）：渠道 ｜ 主窗口内 ｜ 次窗口内 ｜ 未上报 */}
+        {/* 表头（≥640px）：渠道 ｜ 主窗口内 ｜ 次窗口内 ｜ 更远 */}
         <div className="hidden gap-x-4 pb-1.5 text-xs text-muted sm:grid sm:grid-cols-[132px_repeat(3,minmax(0,1fr))]">
           <span>{t('expiryChannelColumn')}</span>
           <span>{t('expiryGroupPrimary')}</span>
           <span>{t('expiryGroupSecondary')}</span>
-          <span>{t('expiryGroupUnreported')}</span>
+          <span>{t('expiryGroupLater')}</span>
         </div>
         <div className="divide-y divide-separator">
           {channels.map(({ channel, accountCount, summary }) => (
@@ -71,11 +71,14 @@ export function ExpirySummaryBar({ rows, sortDisabled, t }: {
             >
               <div className="col-span-2 min-w-0 sm:col-span-1">
                 <div className="truncate text-sm font-semibold text-foreground">{accountChannelLabelByKey(channel)}</div>
-                <div className="text-xs text-muted">{t('expiryChannelAccounts', { n: accountCount })}</div>
+                <div className="text-xs text-muted">
+                  {t('expiryChannelAccounts', { n: accountCount })}
+                  {summary.unreported.count > 0 ? ` · ${t('expiryChannelUnreported', { n: summary.unreported.count })}` : ''}
+                </div>
               </div>
               <GroupCell label={t('expiryGroupPrimary')} count={summary.primary.count} totals={summary.primary.totals} tone="text-warning" />
               <GroupCell label={t('expiryGroupSecondary')} count={summary.secondary.count} totals={summary.secondary.totals} />
-              <GroupCell label={t('expiryGroupUnreported')} count={summary.unreported.count} />
+              <GroupCell label={t('expiryGroupLater')} count={summary.later.count} totals={summary.later.totals} />
             </div>
           ))}
         </div>

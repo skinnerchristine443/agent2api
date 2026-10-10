@@ -16,6 +16,7 @@ private/
 
 # Local agent run logs and workspace data: kept locally, never uploaded.
 .agent-runs/
+.smoke/
 .workbuddy/
 
 # Change log: kept locally, never uploaded.

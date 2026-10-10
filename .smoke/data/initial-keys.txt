@@ -1,2 +1,0 @@
-proxy_api_key=qt17zpW7OAWLGsPAyDrsZelPD4F84l5i3Rn-tg9jBFo
-console_key=6Q2Kc5kLADHfQFkKZ2iSVQ3G7koQy5hHfncqGa6k4ks

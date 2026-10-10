@@ -25,6 +25,14 @@ function account(id: string, quota?: AccountRow['quota'], extra: Partial<Account
   return { id, name: `账号 ${id}`, provider: 'workbuddy', region: 'cn', ...extra, quota }
 }
 
+function pkgQuota(packages: Array<{ remain: number; ends_at: number; size?: number; unit?: string }>, unit: string): AccountRow['quota'] {
+  const normalized = packages.map((pkg) => ({ remain: pkg.remain, used: 0, size: pkg.size ?? pkg.remain, ends_at: pkg.ends_at, unit }))
+  const earliest = normalized.reduce((min, pkg) => (min === 0 || pkg.ends_at < min ? pkg.ends_at : min), 0)
+  const expiring = normalized.filter((pkg) => pkg.ends_at === earliest).reduce((sum, pkg) => sum + pkg.remain, 0)
+  const remaining = normalized.reduce((sum, pkg) => sum + pkg.remain, 0)
+  return { expires_at: earliest, expiring_remain: expiring, remaining, total: remaining, used: 0, unit, packages: normalized }
+}
+
 const WINDOWS = { primarySeconds: 3 * DAY, secondarySeconds: 7 * DAY, nowMs: NOW_MS }
 
 describe('expiryModel · 窗口天数换算', () => {
@@ -104,24 +112,25 @@ describe('expiryModel · 明细分组与排序', () => {
   })
 })
 
-describe('expiryModel · 概览聚合', () => {
-  it('按单位分别求和（不同渠道单位不可相加）', () => {
+describe('expiryModel · 概览聚合（金额按包逐包归桶）', () => {
+  it('按单位分别求和、按窗口分桶（不同渠道单位不可相加）', () => {
     const rows = expiryRowsFor([
-      account('a', { expires_at: NOW_S + DAY, expiring_remain: 100, unit: 'credits' }),
-      account('b', { expires_at: NOW_S + 2 * DAY, expiring_remain: 250, unit: 'credits' }),
-      account('c', { expires_at: NOW_S + DAY, expiring_remain: 5, unit: '次' }),
+      account('a', pkgQuota([{ remain: 100, ends_at: NOW_S + DAY }], 'credits')),
+      account('b', pkgQuota([{ remain: 250, ends_at: NOW_S + 2 * DAY }], 'credits')),
+      account('c', pkgQuota([{ remain: 5, ends_at: NOW_S + DAY }], '次')),
     ], WINDOWS)
-    expect(sumByUnit(rows)).toEqual([
+    expect(sumByUnit(rows, 'primary')).toEqual([
       { unit: 'credits', amount: 350 },
       { unit: '次', amount: 5 },
     ])
+    expect(sumByUnit(rows, 'secondary')).toEqual([])
   })
 
   it('summarizeExpiry 给出四组计数与主/次窗口额度合计', () => {
     const rows = expiryRowsFor([
-      account('a', { expires_at: NOW_S + DAY, expiring_remain: 100, unit: 'credits' }),
-      account('b', { expires_at: NOW_S + 5 * DAY, expiring_remain: 20, unit: 'credits' }),
-      account('c', { expires_at: NOW_S + 30 * DAY }),
+      account('a', pkgQuota([{ remain: 100, ends_at: NOW_S + DAY }], 'credits')),
+      account('b', pkgQuota([{ remain: 20, ends_at: NOW_S + 5 * DAY }], 'credits')),
+      account('c', pkgQuota([{ remain: 9, ends_at: NOW_S + 30 * DAY }], 'credits')),
       account('d'),
     ], WINDOWS)
     const summary = summarizeExpiry(rows)
@@ -130,17 +139,75 @@ describe('expiryModel · 概览聚合', () => {
     expect(summary.secondary.count).toBe(1)
     expect(summary.secondary.totals).toEqual([{ unit: 'credits', amount: 20 }])
     expect(summary.later.count).toBe(1)
+    expect(summary.later.totals).toEqual([{ unit: 'credits', amount: 9 }])
     expect(summary.unreported.count).toBe(1)
+  })
+
+  // 金额口径修正的核心回归：一个账号有多个不同到期时间的包时，**每个包按
+  // 自己的 ends_at 归桶**，而不是只把「最早那批」的 remain 记进一个窗口。
+  it('单账号多包：各自按 ends_at 归入对应窗口（跨窗口并存）', () => {
+    const rows = expiryRowsFor([
+      account('multi', pkgQuota([
+        { remain: 100, ends_at: NOW_S + 1 * DAY },   // 主窗口（0–3 天）
+        { remain: 200, ends_at: NOW_S + 3 * DAY },   // 主窗口（含 3 天整）
+        { remain: 300, ends_at: NOW_S + 5 * DAY },   // 次窗口（3–7 天）
+        { remain: 400, ends_at: NOW_S + 30 * DAY },  // 更远
+      ], 'credits')),
+    ], WINDOWS)
+    const row = rows[0]
+    expect(row.amounts.primary).toBe(300)   // 100 + 200
+    expect(row.amounts.secondary).toBe(300) // 300
+    expect(row.amounts.later).toBe(400)
+    const summary = summarizeExpiry(rows)
+    // 计数同样按包判定：该账号在三个窗口都有包。
+    expect(summary.primary.count).toBe(1)
+    expect(summary.secondary.count).toBe(1)
+    expect(summary.later.count).toBe(1)
+  })
+
+  it('边界：3 天整属主窗口，3 天+1 秒属次窗口', () => {
+    const rows = expiryRowsFor([
+      account('at-three', pkgQuota([{ remain: 10, ends_at: NOW_S + 3 * DAY }], 'credits')),
+      account('past-three', pkgQuota([{ remain: 20, ends_at: NOW_S + 3 * DAY + 1 }], 'credits')),
+    ], WINDOWS)
+    const byId = new Map(rows.map((r) => [r.id, r.amounts]))
+    expect(byId.get('at-three')?.primary).toBe(10)
+    expect(byId.get('at-three')?.secondary).toBe(0)
+    expect(byId.get('past-three')?.primary).toBe(0)
+    expect(byId.get('past-three')?.secondary).toBe(20)
+  })
+
+  it('remain=0 的包不计入任何窗口（已耗尽）；已过期的包同样不计', () => {
+    const rows = expiryRowsFor([
+      account('exhausted', pkgQuota([
+        { remain: 0, ends_at: NOW_S + 1 * DAY },   // 主窗口内但已耗尽 → 不计
+        { remain: 50, ends_at: NOW_S + 2 * DAY },  // 主窗口内有效
+      ], 'credits')),
+      account('expired-pkg', pkgQuota([
+        { remain: 999, ends_at: NOW_S - 60 },      // 已过期 → 不计
+      ], 'credits')),
+    ], WINDOWS)
+    const byId = new Map(rows.map((r) => [r.id, r.amounts]))
+    expect(byId.get('exhausted')?.primary).toBe(50)
+    expect(byId.get('expired-pkg')?.primary).toBe(0)
+    expect(byId.get('expired-pkg')?.later).toBe(0)
+  })
+
+  it('主窗口=0（到期排序关闭）：所有有效包金额归入 later', () => {
+    const rows = expiryRowsFor([
+      account('a', pkgQuota([{ remain: 100, ends_at: NOW_S + 1 * DAY }], 'credits')),
+    ], { primarySeconds: 0, secondarySeconds: 0, nowMs: NOW_MS })
+    expect(rows[0].amounts).toEqual({ primary: 0, secondary: 0, later: 100 })
   })
 
   it('summarizeExpiryByChannel：按「渠道 × 区域」分组、固定序且未知渠道排最后', () => {
     const rows = expiryRowsFor([
-      account('a1', { expires_at: NOW_S + DAY, expiring_remain: 100, unit: 'credits' }, { provider: 'Acme' }),
-      account('w1', { expires_at: NOW_S + DAY, expiring_remain: 50, unit: 'credits' }),
-      account('w2', { expires_at: NOW_S + 5 * DAY, expiring_remain: 20, unit: 'credits' }, { region: 'global' }),
-      account('t1', { expires_at: NOW_S + 30 * DAY, expiring_remain: 30, unit: '次' }, { provider: 'trae' }),
+      account('a1', pkgQuota([{ remain: 100, ends_at: NOW_S + DAY }], 'credits'), { provider: 'Acme' }),
+      account('w1', pkgQuota([{ remain: 50, ends_at: NOW_S + DAY }], 'credits')),
+      account('w2', pkgQuota([{ remain: 20, ends_at: NOW_S + 5 * DAY }], 'credits'), { region: 'global' }),
+      account('t1', pkgQuota([{ remain: 30, ends_at: NOW_S + 30 * DAY }], '次'), { provider: 'trae' }),
       account('t2', undefined, { provider: 'trae' }),
-      account('x1', { expires_at: NOW_S + 2 * DAY, expiring_remain: 10, unit: 'credits' }, { provider: 'zeta' }),
+      account('x1', pkgQuota([{ remain: 10, ends_at: NOW_S + 2 * DAY }], 'credits'), { provider: 'zeta' }),
     ], WINDOWS)
     const channels = summarizeExpiryByChannel(rows)
     // 固定序：workbuddy-cn → workbuddy-global → trae-cn；未知键排最后。

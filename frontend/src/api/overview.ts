@@ -93,19 +93,6 @@ export function refreshModels(accountId?: string, view?: 'regional', signal?: Ab
   })
 }
 
-export function updateModelContext(modelKey: string, contextLength: number, signal?: AbortSignal) {
-  return api<{
-    model: string
-    context_length: number
-    default_context_length: number
-    context_custom: boolean
-  }>(`/api/models/${encodeURIComponent(modelKey)}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ context_length: contextLength }),
-    signal,
-  })
-}
-
 export function updateProviderMaxMode(provider: string, modelKey: string, maxMode: boolean, signal?: AbortSignal) {
   return api<{
     model: string

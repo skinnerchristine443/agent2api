@@ -1,4 +1,4 @@
-import { Chip, Description, Label, ListBox, Select } from '@heroui/react'
+import { Description, Label, ListBox, Select } from '@heroui/react'
 
 import { ProviderMark } from '@/components/brand/ProviderMark'
 import type { Translate } from '@/i18n/messages'
@@ -78,9 +78,4 @@ export function GrowthAccountPicker({ accounts, value, unsupportedProviders, onC
       </Select.Popover>
     </Select>
   )
-}
-
-/** 供页面复用的置灰标记（样式与选择器内一致）。 */
-export function GrowthUnsupportedChip({ t }: { t: Translate }) {
-  return <Chip size="sm" variant="soft" color="warning">{t('growthUnsupported')}</Chip>
 }

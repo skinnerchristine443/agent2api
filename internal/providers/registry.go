@@ -16,10 +16,9 @@ const (
 type AuthType string
 
 const (
-	AuthNone   AuthType = "none"
-	AuthOAuth  AuthType = "oauth"
-	AuthPAT    AuthType = "pat"
-	AuthNative AuthType = "native"
+	AuthNone  AuthType = "none"
+	AuthOAuth AuthType = "oauth"
+	AuthPAT   AuthType = "pat"
 )
 
 // ProviderCapabilities 是控制台渲染所用的：这些标记决定 provider 提供哪些

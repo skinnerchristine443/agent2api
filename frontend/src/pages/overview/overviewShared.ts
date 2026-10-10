@@ -1,5 +1,6 @@
 import type { DictKey, Translate } from '@/i18n/messages'
 import type { RequestStats } from '@/api/logs'
+import { ERROR_KIND_LABEL_KEYS } from '@/lib/logsFormat'
 import { accountChannelLabelByKey } from '@/lib/provider'
 
 import type { StatsWindow } from './windowParam'
@@ -34,14 +35,6 @@ export function familyLabel(channel: string | undefined, t: Translate) {
 }
 
 export function errorLabel(kind: string, t: Translate) {
-  const keys: Record<string, DictKey> = {
-    quota: 'logsKindQuota',
-    rate_limit: 'logsKindRateLimit',
-    auth: 'logsKindAuth',
-    not_ready: 'logsKindNotReady',
-    unavailable: 'logsKindUnavailable',
-    invalid_request: 'logsKindInvalidRequest',
-    model_not_available: 'logsKindModelNotAvailable',
-  }
-  return keys[kind] ? t(keys[kind]) : kind
+  const key = ERROR_KIND_LABEL_KEYS[kind as keyof typeof ERROR_KIND_LABEL_KEYS]
+  return key ? t(key) : kind
 }

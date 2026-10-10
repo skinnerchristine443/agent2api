@@ -48,12 +48,6 @@ type Agent interface {
 	Apply(context.Context, ApplyRequest) (ApplyResponse, error)
 }
 
-type PreparedAgent interface {
-	Prepare(context.Context, PrepareRequest) (ApplyResponse, error)
-	ApplyPrepared(context.Context, ApplyRequest) (ApplyResponse, error)
-	Cancel(context.Context) error
-}
-
 type AgentClient struct {
 	baseURL string
 	token   string

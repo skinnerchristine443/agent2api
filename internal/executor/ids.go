@@ -71,14 +71,9 @@ func NextLocalMidnightCooldownAt(now time.Time) time.Duration {
 	return next.Sub(now)
 }
 
-// NextLocalFourAMCooldown 是硬性配额拒绝
-// （HTTP 402 / 业务码 14018）的复位时间点：上游窗口在
-// 本地 04:00 边界滚动，而非午夜，因此冷却到午夜会
-// 在一个仍处关闭状态的窗口内重试。
-func NextLocalFourAMCooldown() time.Duration {
-	return NextLocalFourAMCooldownAt(time.Now())
-}
-
+// NextLocalFourAMCooldownAt 是硬性配额拒绝（HTTP 402 / 业务码 14018）的复位
+// 时间点：上游窗口在本地 04:00 边界滚动，而非午夜，因此冷却到午夜会在一个
+// 仍处关闭状态的窗口内重试。
 func NextLocalFourAMCooldownAt(now time.Time) time.Duration {
 	zone := now.Location()
 	if zone == nil {

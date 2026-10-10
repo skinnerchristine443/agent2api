@@ -110,12 +110,6 @@ type ProviderChat interface {
 	ChatStream(ctx context.Context, accountID string, req translate.ChatRequest) (*http.Response, ResolvedChat, error)
 }
 
-// StreamFormat 命名 ProviderChat.ChatStream body 所使用的 SSE 方言。
-// 为空表示 OpenAI chat-completions 增量（共享的内部契约）；
-// "responses" 表示上游已经发出 OpenAI Responses 事件，
-// /v1/responses 端点可直接转发而无需转换。
-const StreamFormatResponses = "responses"
-
 // RequestOptions 是执行器为某个被选中的账号所做的每次尝试的执行决策。
 // 它们显式传递，绝不通过 ctx，并在每次故障转移尝试时重新计算。
 type RequestOptions struct {
@@ -257,9 +251,6 @@ type Adapter struct {
 	// GrowthSummary 是可选的轻量成长计数（跨账号总览用，只打任务清单）。
 	// 为 nil 时总览跳过该渠道的账号。
 	GrowthSummary AccountGrowthSummarizer
-	// StreamFormat 声明 ChatStream 返回的 SSE 方言（见
-	// StreamFormat* 常量）。为空表示 chat-completions 增量。
-	StreamFormat string
 	// NativeResponses 是可选的原生 Responses 能力。设置后，
 	// 路由到该适配器的 /v1/responses 请求会跳过 chat 形式。
 	NativeResponses NativeResponsesStreamer
@@ -301,16 +292,6 @@ type CredentialImporter interface {
 	PrepareImport([]byte) (CredentialImport, error)
 }
 
-// AdminRequest/Response 携带 worker 协议数据，绝非公开 HTTP writer。
-type AdminRequest struct {
-	AccountID, Action, Method, ContentType string
-	Body                                   []byte
-}
-type AdminResponse struct {
-	Status int
-	Header map[string][]string
-	Body   []byte
-}
 type ActionError struct {
 	Code string
 	Err  error

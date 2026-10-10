@@ -16,7 +16,6 @@ const (
 	RequestStatusError      = "error"
 	RequestStatusCanceled   = "canceled"
 
-	AttemptStatusStarted  = "started"
 	AttemptStatusOK       = "ok"
 	AttemptStatusError    = "error"
 	AttemptStatusFailover = "failover"

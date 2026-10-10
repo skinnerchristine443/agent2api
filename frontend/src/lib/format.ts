@@ -6,6 +6,9 @@ export function formatCompact(value: number) {
   return String(Math.round(value))
 }
 
+// 概览域（RankBoard / StatsCards）的延迟展示：整秒去尾零（`1s` / `1.5s`）。
+// 与 `logsFormat.formatLatency` 有意不同——后者面向日志表格，保留一位小数
+// （`1.0s`）以对齐等宽列宽。两者非等价，勿合并。
 export function formatLatency(ms: number | null | undefined) {
   if (ms == null || !Number.isFinite(ms)) return '—'
   if (ms >= 1000) return `${trimFixed(ms / 1000)}s`
@@ -24,6 +27,9 @@ export function formatBytes(bytes: number | null | undefined) {
   return `${trimFixed(value)} ${units[unit]}`
 }
 
+// 概览域（CountUp）的百分比：小值留一位小数（`5.0%`）。
+// 与 `pages/usage/usageFormat.formatPercent` 有意不同——后者面向用量表，
+// 整数百分比、0 显示为「—」。两者非等价，勿合并。
 export function formatPercent(rate: number | null | undefined) {
   if (rate == null || !Number.isFinite(rate)) return '—'
   const pct = rate * 100

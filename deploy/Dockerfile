@@ -17,8 +17,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 COPY --from=frontend /web/dist/ ./internal/webui/static/
-	RUN CGO_ENABLED=0 GOOS="${TARGETOS}" GOARCH="${TARGETARCH}" go build -trimpath -ldflags "-s -w -X agent2api/internal/buildinfo.Version=${APP_VERSION} -X agent2api/internal/buildinfo.Commit=${APP_COMMIT}" -o /out/agent2api ./cmd/server \
-	  && CGO_ENABLED=0 GOOS="${TARGETOS}" GOARCH="${TARGETARCH}" go build -trimpath -ldflags "-s -w -X agent2api/internal/buildinfo.Version=${APP_VERSION} -X agent2api/internal/buildinfo.Commit=${APP_COMMIT}" -o /out/agent2api-updater ./cmd/updater
+RUN CGO_ENABLED=0 GOOS="${TARGETOS}" GOARCH="${TARGETARCH}" go build -trimpath -ldflags "-s -w -X agent2api/internal/buildinfo.Version=${APP_VERSION} -X agent2api/internal/buildinfo.Commit=${APP_COMMIT}" -o /out/agent2api ./cmd/server \
+  && CGO_ENABLED=0 GOOS="${TARGETOS}" GOARCH="${TARGETARCH}" go build -trimpath -ldflags "-s -w -X agent2api/internal/buildinfo.Version=${APP_VERSION} -X agent2api/internal/buildinfo.Commit=${APP_COMMIT}" -o /out/agent2api-updater ./cmd/updater
 
 # ---- 单一运行时 ----
 # 不含 Node.js：所有 provider 完全在进程内运行（纯 Go）。

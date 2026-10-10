@@ -153,5 +153,3 @@ export function useModelsCatalog() {
     onReasoningChange,
   }
 }
-
-export type ModelsCatalog = ReturnType<typeof useModelsCatalog>

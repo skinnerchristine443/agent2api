@@ -13,6 +13,7 @@ import type { FilterSelectOption } from '@/components/ui/FilterSelect'
 import { useApiQuery } from '@/hooks/useApiQuery'
 import { useI18n } from '@/hooks/I18nContext'
 import { usePagedQuery } from '@/hooks/usePagedQuery'
+import { accountNameMap } from '@/lib/account'
 import { accountProviderLabel } from '@/lib/provider'
 import {
   rangeFromPreset,
@@ -186,11 +187,7 @@ export function useLogsFilterOptions(): LogsFilterOptions {
   const accounts = useMemo(() => query.data?.accounts ?? [], [query.data])
   const models = useMemo(() => query.data?.models ?? [], [query.data])
 
-  const accountNameById = useMemo(() => {
-    const names = new Map<string, string>()
-    for (const account of accounts) names.set(account.id, account.name || account.id)
-    return names
-  }, [accounts])
+  const accountNameById = useMemo(() => accountNameMap(accounts), [accounts])
 
   const accountProviderById = useMemo(() => {
     const providers = new Map<string, { provider?: string; region?: string }>()

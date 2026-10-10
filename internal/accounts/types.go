@@ -8,7 +8,6 @@ import (
 )
 
 var ErrAccountNotFound = errors.New("account not found")
-var ErrSecretNotFound = errors.New("secret not found")
 
 const (
 	DefaultWorkBuddyCheckinTime = "09:00"

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 
 import { fetchAccounts } from '@/api/overview'
+import { accountNameMap } from '@/lib/account'
 import { useApiQuery } from '@/hooks/useApiQuery'
 
 /**
@@ -19,9 +20,5 @@ import { useApiQuery } from '@/hooks/useApiQuery'
 export function useAccountNameMap(): Map<string, string> {
   const query = useApiQuery((signal) => fetchAccounts(false, signal), 'account-names')
   const accounts = useMemo(() => query.data?.data ?? [], [query.data])
-  return useMemo(() => {
-    const names = new Map<string, string>()
-    for (const account of accounts) names.set(account.id, account.name || account.id)
-    return names
-  }, [accounts])
+  return useMemo(() => accountNameMap(accounts), [accounts])
 }

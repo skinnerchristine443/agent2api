@@ -1,6 +1,7 @@
 import { getLocalTimeZone, parseAbsoluteToLocal, toCalendarDateTime, type DateValue } from '@internationalized/date'
 
 import type { RequestLog } from '@/api/logs'
+import type { DictKey } from '@/i18n/messages'
 
 // 日志域的**纯函数与取值域**（无 JSX、无取数、无 React）：格式化 / 配色 / 时间
 // 预设 / URL 筛选参数的读写与稳定键。请求页与运行页、数据层（hooks）共用一份，
@@ -18,21 +19,11 @@ export type RuntimeFilter = 'all' | 'info' | 'warn' | 'error'
 export type StreamFilter = 'all' | 'stream' | 'sync'
 /** 时间预设（URL `range`；默认 `1h` 不写入 URL，`custom` 配合 `from`/`to`）。 */
 export type TimeRange = 'all' | '1h' | '24h' | '7d' | 'custom'
-/** 错误类型筛选（URL `kind` ↔ API `error_kind`；默认 `all` 不写入 URL）。 */
-export type ErrorKindFilter =
-  | 'all'
-  | 'quota'
-  | 'rate_limit'
-  | 'auth'
-  | 'not_ready'
-  | 'unavailable'
-  | 'invalid_request'
-  | 'model_not_available'
-
 export type DateRangeValue = { start: DateValue; end: DateValue }
 
 /** URL 取值域（非法取值一律回落默认，防手改 URL 把 UI 打进非法态）。 */
 export const REQUEST_STATUS_VALUES = ['ok', 'incomplete', 'error', 'canceled'] as const
+/** 错误类型取值域（URL `kind` ↔ API `error_kind`）——日志筛选与概览错误榜的唯一事实源。 */
 export const ERROR_KIND_VALUES = [
   'quota',
   'rate_limit',
@@ -42,6 +33,18 @@ export const ERROR_KIND_VALUES = [
   'invalid_request',
   'model_not_available',
 ] as const
+/** 错误类型筛选（含 `all`；默认 `all` 不写入 URL）。 */
+export type ErrorKindFilter = 'all' | (typeof ERROR_KIND_VALUES)[number]
+/** 错误类型 → i18n 键（筛选项与概览错误榜共用，避免多处各列一份）。 */
+export const ERROR_KIND_LABEL_KEYS: Record<(typeof ERROR_KIND_VALUES)[number], DictKey> = {
+  quota: 'logsKindQuota',
+  rate_limit: 'logsKindRateLimit',
+  auth: 'logsKindAuth',
+  not_ready: 'logsKindNotReady',
+  unavailable: 'logsKindUnavailable',
+  invalid_request: 'logsKindInvalidRequest',
+  model_not_available: 'logsKindModelNotAvailable',
+}
 export const STREAM_VALUES = ['stream', 'sync'] as const
 export const TIME_RANGE_VALUES = ['all', '1h', '24h', '7d', 'custom'] as const
 export const RUNTIME_LEVEL_VALUES = ['info', 'warn', 'error'] as const
@@ -97,6 +100,8 @@ export function reasoningLabel(log: Pick<RequestLog, 'requested_reasoning' | 're
   return resolved || requested
 }
 
+// 日志表格的延迟展示：保留一位小数（`1.0s`）以对齐等宽列宽。
+// 与 `lib/format.formatLatency`（概览域，去尾零 `1s`）有意不同，勿合并。
 export function formatLatency(ms?: number | null) {
   if (ms == null) return '—'
   if (ms < 1000) return `${ms}ms`

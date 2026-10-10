@@ -8,6 +8,8 @@ import { loadRequestIdOptions } from '@/hooks/useLogsQueries'
 import {
   customRangeFromISO,
   dateValueToISO,
+  ERROR_KIND_LABEL_KEYS,
+  ERROR_KIND_VALUES,
   type ErrorKindFilter,
   type RequestFilter,
   type RequestLogsFilters,
@@ -109,13 +111,7 @@ export function LogsRequestsFilterBar({
           onChange={(next) => onChange({ kind: (next || 'all') as ErrorKindFilter })}
           options={[
             { id: '', label: t('logsFilterKindAll') },
-            { id: 'quota', label: t('logsKindQuota') },
-            { id: 'rate_limit', label: t('logsKindRateLimit') },
-            { id: 'auth', label: t('logsKindAuth') },
-            { id: 'not_ready', label: t('logsKindNotReady') },
-            { id: 'unavailable', label: t('logsKindUnavailable') },
-            { id: 'invalid_request', label: t('logsKindInvalidRequest') },
-            { id: 'model_not_available', label: t('logsKindModelNotAvailable') },
+            ...ERROR_KIND_VALUES.map((kind) => ({ id: kind, label: t(ERROR_KIND_LABEL_KEYS[kind]) })),
           ]}
         />
       </div>

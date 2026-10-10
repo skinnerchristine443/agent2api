@@ -179,13 +179,10 @@ func TestT54ValidateCredentialFormat(t *testing.T) {
 func TestT54RegistryRuntimeRegisterAndGet(t *testing.T) {
 	reg := NewRegistry()
 
-	reg.Register(Adapter{ID: "  Mixed-Case  ", StreamFormat: "responses"})
+	reg.Register(Adapter{ID: "  Mixed-Case  "})
 	adapter, ok := reg.Get("mixed-case")
-	if !ok || adapter.StreamFormat != "responses" {
+	if !ok || adapter.ID != "mixed-case" {
 		t.Fatalf("registered adapter = %+v ok=%v", adapter, ok)
-	}
-	if adapter.ID != "mixed-case" {
-		t.Fatalf("Register must store the canonical ID, got %q", adapter.ID)
 	}
 	if _, ok := reg.Get("MIXED-CASE"); !ok {
 		t.Fatal("lookup must canonicalize the query ID too")
@@ -218,7 +215,7 @@ func TestT54RegistryRuntimeConcurrentAccess(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			reg.Register(Adapter{ID: "shared", StreamFormat: "responses"})
+			reg.Register(Adapter{ID: "shared"})
 			if _, ok := reg.Get("shared"); !ok {
 				t.Error("adapter registered by a concurrent writer must be readable")
 			}

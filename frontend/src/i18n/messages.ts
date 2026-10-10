@@ -848,10 +848,6 @@ export const LOGS_ROUTING_KEYS = {
   sticky_escape: 'logsRouting_sticky_escape',
 } as const satisfies Record<string, SharedDictKey>
 
-export type UpdateStateCode = keyof typeof UPDATE_STATE_KEYS
-export type ReasoningLevelCode = keyof typeof REASONING_LEVEL_KEYS
-export type LogsRoutingCode = keyof typeof LOGS_ROUTING_KEYS
-
 function keyFor<T extends Record<string, string>>(map: T, code: string): T[keyof T] | undefined {
   return Object.prototype.hasOwnProperty.call(map, code) ? map[code as keyof T] : undefined
 }

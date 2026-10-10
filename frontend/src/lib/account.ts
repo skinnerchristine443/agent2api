@@ -5,6 +5,13 @@ export type AccountRow = NonNullable<Overview['accounts']>[number]
 export type AccountState = 'disabled' | 'quota_exhausted' | 'cooling' | 'hot' | 'ready' | 'login' | 'loading' | 'starting' | 'unavailable' | 'dead' | 'auth_failed'
 export type QuotaTone = 'ok' | 'warn' | 'danger'
 
+/** 账号 id → 展示名（缺名回退 id）。日志 / 用量等按内部 id 分组的视图统一经此映射。 */
+export function accountNameMap(accounts: AccountRow[]): Map<string, string> {
+  const names = new Map<string, string>()
+  for (const account of accounts) names.set(account.id, account.name || account.id)
+  return names
+}
+
 /** 冷却剩余时长标签（`12m` / `45s`）。`now` 可注入（测试 / 批量计算共用时钟）。 */
 export function cooldownLabel(until?: string | null, now: number = Date.now()) {
   if (!until) return ''

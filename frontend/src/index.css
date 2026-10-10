@@ -216,15 +216,9 @@ body {
   color: var(--foreground);
 }
 
-/* HeroUI 3.2.4 Tabs.Indicator crashes (SharedElementTransition). Selected
-   tabs and pagination current-page otherwise stay unfilled / gray. Glue both
-   to accent-soft so selection matches ToggleButton / Switch / Radio. */
-.tabs__tab[data-selected="true"] {
-  background: var(--accent-soft);
-  color: var(--accent-soft-foreground);
-  box-shadow: none;
-}
-
+/* HeroUI Pagination current-page otherwise stays unfilled / gray. Glue it to
+   accent-soft so selection matches ToggleButton / Switch / Radio.
+   （.tabs__tab 覆盖已随「弃用 HeroUI Tabs」一并移除。） */
 .pagination__link[data-active="true"] {
   --pagination-link-bg: var(--accent-soft);
   --pagination-link-bg-hover: var(--accent-soft-hover);
@@ -286,96 +280,6 @@ body {
 .account-card .status-dot {
   width: 0.375rem;
   height: 0.375rem;
-}
-
-.account-meter {
-  display: grid;
-  width: 100%;
-  min-width: 0;
-  gap: 0.4rem;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas:
-    "output"
-    "track";
-}
-
-.account-meter .meter__output,
-.account-meter .meter__track {
-  width: 100%;
-  min-width: 0;
-}
-
-.account-meter .meter__track {
-  height: 0.5rem;
-  border-radius: 999px;
-  background: var(--separator);
-  overflow: hidden;
-}
-
-.account-meter .meter__fill {
-  border-radius: 999px;
-}
-
-.account-meter--window {
-  gap: 0.3rem;
-}
-
-.account-meter--window .meter__track {
-  height: 0.5rem;
-}
-
-/* HeroUI Tooltip.Trigger is inline-block; quota windows must each occupy a
-   full row on the account card instead of sitting side by side. */
-.account-quota-windows .tooltip__trigger {
-  display: block;
-  width: 100%;
-  min-width: 0;
-}
-
-.runtime-meter {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 0.15rem;
-  height: 0.5rem;
-  align-items: end;
-}
-
-.runtime-meter__seg {
-  display: block;
-  height: 100%;
-  border-radius: 1px;
-  background: var(--separator);
-  transform: scaleY(0.32);
-  transform-origin: center bottom;
-  opacity: 0.45;
-}
-
-.runtime-meter__seg[data-on="true"] {
-  transform: scaleY(1);
-  opacity: 1;
-}
-
-.runtime-meter__seg[data-tone="ok"] {
-  background: var(--success);
-}
-
-.runtime-meter__seg[data-tone="warn"] {
-  background: var(--warning);
-}
-
-.runtime-meter__seg[data-tone="danger"] {
-  background: var(--danger);
-}
-
-.runtime-meter__seg[data-tone="muted"] {
-  background: var(--muted);
-}
-
-.release-notes-panel {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--surface-secondary);
-  padding: 0.75rem 1rem 0.85rem;
 }
 
 .release-notes-box {
@@ -703,92 +607,8 @@ body {
   background: var(--danger);
 }
 
-.show-more-row {
-  display: flex;
-  align-items: center;
-  padding: 4px 12px 8px;
-}
-
-.acct-detail {
-  padding: 12px;
-  background: var(--surface-sunken);
-  border-top: 1px solid var(--border-subtle);
-}
-
-.detail-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 960px;
-}
-
-.detail-auth {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-}
-
-.detail-kv {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 6px 18px;
-  font-size: 12px;
-}
-
-.detail-kv .kv {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 3px 0;
-  border-bottom: 1px dashed var(--border-subtle);
-}
-
-.detail-kv .k {
-  color: var(--text-secondary);
-}
-
-.detail-kv .v {
-  color: var(--text);
-  min-width: 0;
-}
-
-.detail-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.detail-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-/* ⋯ 触发器复用 .button 类（Dropdown.Trigger 自身即 button，避免 button 嵌套）：
-   .dropdown__trigger 的 inline-block 会盖掉 .button 的 inline-flex 居中，这里按更高
-   特异性恢复（否则 icon-only 图标不居中）。 */
-.detail-actions [data-slot='dropdown-trigger'] {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-divider {
-  width: 1px;
-  align-self: stretch;
-  margin: 2px;
-  background: var(--border-subtle);
-}
-
 /* 行内开关列的宽度回落（批次 7；批次 9 扩到两列）：<1280px 隐藏「签到 / 模型」
-   开关列并同步收缩列模板（表头与行必须一致），开关功能由展开卡内的
-   .row-switches-fallback 承担；签到结果 / 立即签到 / 刷新 / 启用等列不回落。 */
+   开关列并同步收缩列模板（表头与行必须一致）；签到结果 / 立即签到 / 刷新 / 启用等列不回落。 */
 @media (max-width: 1279px) {
   .acct-head,
   .acct-row {
@@ -804,12 +624,6 @@ body {
   /* 优先级列在窄屏让位（设置里仍可改；列表内联编辑在 <1280px 收起）。 */
   .acct-head .col-priority,
   .acct-row .col-priority {
-    display: none;
-  }
-}
-
-@media (min-width: 1280px) {
-  .row-switches-fallback {
     display: none;
   }
 }

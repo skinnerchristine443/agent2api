@@ -38,10 +38,12 @@ export function OverviewPage() {
   // 全局刷新（AppHeader 按钮）后，页面数据同步刷新。
   useSummaryRefresh(overview, refreshAll)
 
-  const accounts = directory.data?.accounts ?? []
+  // `?? []` 每次渲染都新建数组 ⇒ 先经 useMemo 落成稳定引用，再进下方 useMemo 依赖
+  // （否则依赖每次渲染都变，memo 恒不命中；见 useLogsQueries 的同款写法）。
+  const accounts = useMemo(() => directory.data?.accounts ?? [], [directory.data])
   // 浅合并兜底：接口返回残缺对象时外层字段回落占位口径（渲染期不因缺字段崩溃）。
   const traffic = { ...EMPTY_STATS, ...(stats.data ?? {}) }
-  const quotaAlerts = alerts.data?.data ?? []
+  const quotaAlerts = useMemo(() => alerts.data?.data ?? [], [alerts.data])
 
   const inboxEvents = useMemo(
     () => buildInboxEvents({ accounts, alerts: quotaAlerts, t }),

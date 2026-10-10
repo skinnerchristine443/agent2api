@@ -5,6 +5,7 @@ import { fetchCheckinRecords } from '@/api/overview'
 import type { CheckinRecord } from '@/api/types'
 import { EmptyPanel } from '@/components/ui/EmptyPanel'
 import { PageAlert } from '@/components/ui/PageAlert'
+import { StatusDot } from '@/components/ui/StatusDot'
 import { SkeletonBlock } from '@/components/ui/skeletons'
 import type { AccountRow } from '@/lib/account'
 import type { Translate } from '@/i18n/messages'
@@ -85,7 +86,7 @@ export function AccountCheckinRecordsModal({ account, t, onClose }: Props) {
                     const status = recordStatus(record, t)
                     return (
                       <div key={record.id} className="flex items-start gap-3 px-3 py-3">
-                        <span className="status-dot mt-1.5 shrink-0" data-state={record.status === 'error' ? 'warn' : 'ok'} />
+                        <StatusDot state={record.status === 'error' ? 'warn' : 'ok'} className="mt-1.5 shrink-0" />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <Chip size="sm" variant="soft" color={status.color}>{status.label}</Chip>
@@ -99,7 +100,8 @@ export function AccountCheckinRecordsModal({ account, t, onClose }: Props) {
                 </div>
               ) : (
                 <EmptyPanel
-                  className="min-h-44 rounded-3xl border border-dashed border-border"
+                  bordered
+                  size="sm"
                   title={t('checkinRecordsEmpty')}
                   hint={t('checkinRecordsHint')}
                 />

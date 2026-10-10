@@ -1,6 +1,7 @@
 import { ArrowClockwise, List, SignOut } from '@phosphor-icons/react'
 import { Button, Toolbar, Tooltip } from '@heroui/react'
 import { useNavigate } from 'react-router-dom'
+import { StatusDot } from '@/components/ui/StatusDot'
 import { useI18n } from '@/hooks/I18nContext'
 import { useOverview } from '@/hooks/OverviewContext'
 import { useApiKey } from '@/hooks/ApiKeyContext'
@@ -29,7 +30,7 @@ export function AppHeader({
 
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-baseline gap-3">
-            <span className="status-dot translate-y-[-1px]" data-state={ready ? 'ok' : 'danger'} />
+            <StatusDot state={ready ? 'ok' : 'danger'} className="translate-y-[-1px]" />
             <h1 className="truncate text-2xl font-semibold tracking-[-0.035em]">{title}</h1>
             <p className="hidden truncate text-sm text-muted xl:block">{desc}</p>
           </div>

@@ -61,7 +61,7 @@ export function LoginPage() {
 
           <div className="my-auto max-w-3xl py-16 lg:py-24">
             <p data-gsap-reveal className="mb-5 mono text-xs text-muted">:3010</p>
-            <h1 data-gsap-reveal className="max-w-3xl text-[clamp(2.25rem,4vw,3.6rem)] font-semibold leading-[0.98] tracking-[-0.045em] text-balance">
+            <h1 data-gsap-reveal className="max-w-3xl text-display font-semibold leading-[1.05] tracking-[-0.045em] text-balance sm:text-2xl md:text-display">
               {t('loginTitle')}
             </h1>
             <p data-gsap-reveal className="mt-6 max-w-xl text-base leading-7 text-muted sm:text-xl">{t('loginLead')}</p>

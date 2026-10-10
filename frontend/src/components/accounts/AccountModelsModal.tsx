@@ -5,6 +5,7 @@ import { fetchModels, refreshModels } from '@/api/overview'
 import type { ModelInfo } from '@/api/types'
 import { ProviderMark } from '@/components/brand/ProviderMark'
 import { EmptyPanel } from '@/components/ui/EmptyPanel'
+import { StatusDot } from '@/components/ui/StatusDot'
 import { SkeletonBlock } from '@/components/ui/skeletons'
 import { PageAlert } from '@/components/ui/PageAlert'
 import type { AccountRow } from '@/lib/account'
@@ -118,7 +119,7 @@ export function AccountModelsModal({ account, t, onClose }: Props) {
                     const free = modelIsFree(model)
                     return (
                       <li key={model.id} className="flex items-start gap-3 px-3 py-2.5">
-                        <span className="status-dot mt-1.5" data-state={model.stale ? undefined : 'ok'} />
+                        <StatusDot state={model.stale ? 'muted' : 'ok'} className="mt-1.5" />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="truncate text-sm font-medium">{model.display_name || model.id}</span>
@@ -139,7 +140,8 @@ export function AccountModelsModal({ account, t, onClose }: Props) {
                 </ul>
               ) : (
                 <EmptyPanel
-                  className="min-h-48 rounded-3xl border border-dashed border-border"
+                  bordered
+                  size="sm"
                   icon={<Cube size={22} />}
                   title={t('accountModelsEmpty')}
                   hint={t('noModelsYet')}

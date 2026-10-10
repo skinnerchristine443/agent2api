@@ -1,8 +1,9 @@
 import { copyText } from '@/lib/clipboard'
 import { useMemo, useState } from 'react'
-import { Button, Card, Chip } from '@heroui/react'
+import { Button, Chip } from '@heroui/react'
 import { ArrowSquareOut, BracketsCurly, Check, Copy, Heartbeat, ListBullets, PaperPlaneTilt } from '@phosphor-icons/react'
 import type { Overview } from '@/api/types'
+import { SectionCard } from '@/components/ui/SectionCard'
 import { useI18n } from '@/hooks/I18nContext'
 import { absUrl } from '@/lib/url'
 
@@ -24,16 +25,11 @@ export function EndpointList({ access }: Props) {
   ], [access, base, t])
 
   return (
-    <Card data-gsap-reveal className="overflow-hidden border-border p-0 shadow-none">
-      <div className="flex items-start justify-between gap-4 border-b border-separator px-5 py-4 sm:px-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold tracking-[-0.015em]">{t('endpoints')}</h3>
-            <Chip size="sm" variant="soft">{t('endpointCount', { count: endpoints.length - 1 })}</Chip>
-          </div>
-          <p className="mt-1 text-xs leading-5 text-muted">{t('routesHint')}</p>
-        </div>
-      </div>
+    <SectionCard
+      title={<span className="flex items-center gap-2">{t('endpoints')}<Chip size="sm" variant="soft">{t('endpointCount', { count: endpoints.length - 1 })}</Chip></span>}
+      hint={t('routesHint')}
+      padded={false}
+    >
       {/* 容器查询（批次 6）：端点卡列数跟随**自身容器宽度**而非视口——
           接入页签化后此卡落在约 730px 的右栏，三列会把标题挤断；全宽场景仍三列。 */}
       <div className="@container">
@@ -52,7 +48,7 @@ export function EndpointList({ access }: Props) {
             </div>
             <p className="mt-2 min-h-0 text-xs leading-5 text-muted">{item.hint}</p>
             <div className="mt-2 flex items-center justify-between gap-2 border-t border-separator pt-2">
-              <span className="text-[10px] font-medium text-muted">{item.method === 'BASE' ? t('endpointBaseLabel') : t('endpointAuthLabel')}</span>
+              <span className="text-micro font-medium text-muted">{item.method === 'BASE' ? t('endpointBaseLabel') : t('endpointAuthLabel')}</span>
               <div className="flex gap-1">
                 <Button isIconOnly size="sm" variant="ghost" aria-label={t('copy')} onPress={() => { void copyText(item.url); setCopiedEndpoint(item.name); window.setTimeout(() => setCopiedEndpoint(''), 1100) }}>
                   {copiedEndpoint === item.name ? <Check size={14} className="text-success" /> : <Copy size={14} />}
@@ -66,6 +62,6 @@ export function EndpointList({ access }: Props) {
         ))}
         </div>
       </div>
-    </Card>
+    </SectionCard>
   )
 }

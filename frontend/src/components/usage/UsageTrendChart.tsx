@@ -122,7 +122,7 @@ export function UsageTrendChart({
           <Line yAxisId="requests" type="monotone" dataKey="requests" stroke="var(--muted)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
-      <div className="mt-2 flex min-h-5 items-center justify-between gap-3 text-[10px] text-muted">
+      <div className="mt-2 flex min-h-5 items-center justify-between gap-3 text-micro text-muted">
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-accent" />{promptLabel}</span>
           <span className="inline-flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-success" />{completionLabel}</span>

@@ -97,7 +97,7 @@ export function OverviewPageSkeleton() {
         </section>
       </section>
       {/* 指标卡 */}
-      <section className="grid overflow-hidden rounded-3xl border border-border bg-surface sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid overflow-hidden rounded-2xl border border-border bg-surface sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
           <div key={index} className="min-h-32 space-y-5 border-separator p-5 first:border-0 sm:border-l sm:first:border-0">
             <SkeletonBlock className="h-4 w-24" />
@@ -166,7 +166,7 @@ export function ProvidersPageSkeleton() {
           <SkeletonBlock className="h-8 w-24" />
         </div>
       </section>
-      <div className="overflow-hidden rounded-3xl border border-border bg-surface">
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface">
         <ProvidersTableSkeleton />
       </div>
     </div>
@@ -184,7 +184,7 @@ export function AccessPageSkeleton() {
         </div>
         <SkeletonBlock className="h-7 w-24" />
       </section>
-      <section className="grid overflow-hidden rounded-3xl border border-border bg-surface sm:grid-cols-3">
+      <section className="grid overflow-hidden rounded-2xl border border-border bg-surface sm:grid-cols-3">
         <div className="space-y-3 border-b border-separator p-5 sm:col-span-2 sm:border-r sm:border-b-0">
           <SkeletonBlock className="h-3 w-20" />
           <SkeletonBlock className="h-4 w-72 max-w-full" />
@@ -194,7 +194,7 @@ export function AccessPageSkeleton() {
           <SkeletonBlock className="h-4 w-28" />
         </div>
       </section>
-      <section className="grid min-h-[620px] overflow-hidden rounded-3xl border border-border bg-surface xl:grid-cols-[minmax(440px,.92fr)_minmax(0,1.08fr)]">
+      <section className="grid min-h-[620px] overflow-hidden rounded-2xl border border-border bg-surface xl:grid-cols-[minmax(440px,.92fr)_minmax(0,1.08fr)]">
         <div className="space-y-6 border-b border-separator p-7 xl:border-r xl:border-b-0">
           <div className="flex items-center gap-3">
             <SkeletonBlock className="size-9" />
@@ -229,7 +229,7 @@ export function AccessPageSkeleton() {
           <SkeletonBlock className="h-3 w-[86%]" />
         </div>
       </section>
-      <section className="overflow-hidden rounded-3xl border border-border bg-surface p-5">
+      <section className="overflow-hidden rounded-2xl border border-border bg-surface p-5">
         <SkeletonBlock className="h-4 w-36" />
         <SkeletonBlock className="mt-5 h-24 w-full" />
       </section>

@@ -1,8 +1,9 @@
-import { Card, Description, Label, ListBox, Select } from '@heroui/react'
+import { Description, Label, ListBox, Select } from '@heroui/react'
 import { SlidersHorizontal } from '@phosphor-icons/react'
 import type { SystemSettings } from '@/api/system'
 
 import { FormRow } from '@/components/ui/FormRow'
+import { SettingCard } from '@/components/ui/SettingCard'
 import { useI18n } from '@/hooks/I18nContext'
 
 type Props = {
@@ -15,15 +16,8 @@ type Props = {
 export function RoutingStrategyCard({ settings, busy, onStrategy }: Props) {
   const { t } = useI18n()
   return (
-    <Card data-gsap-reveal>
-      <div className="flex items-start gap-3">
-        <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-secondary text-foreground"><SlidersHorizontal size={15} /></div>
-        <div>
-          <h3 className="font-semibold">{t('routingStrategyTitle')}</h3>
-          <p className="mt-1 text-xs leading-5 text-muted">{t('routingStrategyHint')}</p>
-        </div>
-      </div>
-      <div className="mt-4 border-t border-separator pt-4">
+    <SettingCard icon={<SlidersHorizontal size={15} />} title={t('routingStrategyTitle')} hint={t('routingStrategyHint')}>
+      <div className="border-t border-separator pt-4">
         <FormRow label={t('routingStrategy')}>
           <Select
             fullWidth
@@ -61,6 +55,6 @@ export function RoutingStrategyCard({ settings, busy, onStrategy }: Props) {
       </div>
       {settings?.session_affinity?.last_escape_reason ? <Description className="mt-3 text-xs">{t('lastSessionEscape')}: {settings.session_affinity.last_escape_reason}</Description> : null}
       {settings?.session_affinity?.last_miss_reason ? <Description className="mt-1 text-xs">{t('lastSessionMiss')}: {settings.session_affinity.last_miss_reason}</Description> : null}
-    </Card>
+    </SettingCard>
   )
 }

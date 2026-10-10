@@ -190,7 +190,7 @@ export function AccountsPage() {
   if (pool.loading && !hasAccounts) return <AccountsPageSkeleton />
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {pool.error ? <PageAlert title={pool.error} /> : null}
 
       {hasAccounts ? (
@@ -241,7 +241,7 @@ export function AccountsPage() {
 
       {!hasAccounts ? (
         <EmptyPanel
-          className="rounded-3xl border border-dashed border-border"
+          bordered
           icon={<BrandMark size={28} />}
           title={t('noAccounts')}
           hint={t('accountEmptyHint')}
@@ -251,7 +251,7 @@ export function AccountsPage() {
 
       {hasAccounts && !filteredRows.length ? (
         <EmptyPanel
-          className="rounded-3xl border border-dashed border-border"
+          bordered
           icon={<MagnifyingGlass size={22} />}
           title={t('noAccountsMatch')}
           action={<Button size="sm" variant="ghost" onPress={filters.clear}>{t('clearFilters')}</Button>}

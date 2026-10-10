@@ -16,6 +16,7 @@ import {
 } from '@phosphor-icons/react'
 import { ProviderMark } from '@/components/brand/ProviderMark'
 import { CompactSwitch } from '@/components/ui/CompactSwitch'
+import { StatusDot } from '@/components/ui/StatusDot'
 import {
   accountState,
   cooldownLabel,
@@ -169,7 +170,7 @@ export function AccountRowItem({
           {account.remote_uid ? <span className="tag mono">UID {account.remote_uid}</span> : null}
         </span>
         <span className="acct-state">
-          <span className="status-dot" data-state={tone} />
+          <StatusDot state={tone} className="size-1.5" />
           <span className="w truncate">{stateCopy}</span>
         </span>
         {/* 额度（批次 15 重排：自后段前移到运行状态之后）。 */}
@@ -202,7 +203,7 @@ export function AccountRowItem({
         <span className="ck-result">
           {onCheckin ? (
             <span className="ck-state" title={checkinTitle}>
-              <span className="status-dot" data-state={checkinTone} />
+              <StatusDot state={checkinTone} className="size-1.5" />
               <span className="w truncate">{t(rowCheckinLabel)}</span>
             </span>
           ) : null}

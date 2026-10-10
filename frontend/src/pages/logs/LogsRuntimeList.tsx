@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Card } from '@heroui/react'
+import { Button } from '@heroui/react'
 import { Check, CopySimple, TerminalWindow } from '@phosphor-icons/react'
 
 import type { RuntimeLogEntry } from '@/api/logs'
 import { EmptyPanel } from '@/components/ui/EmptyPanel'
+import { SectionCard } from '@/components/ui/SectionCard'
+import { StatusDot } from '@/components/ui/StatusDot'
 import { LogsRuntimeListSkeleton } from '@/components/ui/skeletons'
 import { useI18n } from '@/hooks/I18nContext'
 import { copyText } from '@/lib/clipboard'
@@ -74,7 +76,7 @@ export function LogsRuntimeList({
   const accountLabel = (id: string) => accountNameById.get(id) || id
 
   return (
-    <Card data-gsap-reveal className="overflow-hidden p-0" aria-busy={loading}>
+    <SectionCard padded={false} className="overflow-hidden" aria-busy={loading}>
       {loading ? (
         <LogsRuntimeListSkeleton />
       ) : items.length === 0 ? (
@@ -101,7 +103,7 @@ export function LogsRuntimeList({
             >
               <div className="mono text-micro text-muted">{formatTime(entry.time)}</div>
               <div className="flex items-center gap-2 text-xs">
-                <span className="status-dot" data-state={levelDot(entry.level)} />
+                <StatusDot state={levelDot(entry.level) || 'muted'} />
                 <span className="font-medium text-muted">{entry.level}</span>
               </div>
               <div className="min-w-0">
@@ -113,6 +115,6 @@ export function LogsRuntimeList({
           ))}
         </div>
       )}
-    </Card>
+    </SectionCard>
   )
 }

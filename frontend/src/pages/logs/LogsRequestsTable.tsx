@@ -1,8 +1,9 @@
-import { Button, Card, Chip, Table } from '@heroui/react'
+import { Button, Chip, Table } from '@heroui/react'
 import { MagnifyingGlass } from '@phosphor-icons/react'
 
 import type { RequestLog } from '@/api/logs'
 import { EmptyPanel } from '@/components/ui/EmptyPanel'
+import { SectionCard } from '@/components/ui/SectionCard'
 import { LogsRequestListSkeleton } from '@/components/ui/skeletons'
 import { useI18n } from '@/hooks/I18nContext'
 
@@ -33,7 +34,7 @@ export function LogsRequestsTable({
   const { t } = useI18n()
 
   return (
-    <Card data-gsap-reveal className="overflow-hidden p-0" aria-busy={loading}>
+    <SectionCard padded={false} className="overflow-hidden">
       {loading ? (
         <LogsRequestListSkeleton />
       ) : items.length === 0 ? (
@@ -111,6 +112,6 @@ export function LogsRequestsTable({
           </Table.ScrollContainer>
         </Table>
       )}
-    </Card>
+    </SectionCard>
   )
 }

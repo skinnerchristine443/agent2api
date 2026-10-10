@@ -1,6 +1,7 @@
 import { Button } from '@heroui/react'
 import { X } from '@phosphor-icons/react'
 
+import { StatusDot } from '@/components/ui/StatusDot'
 import type { AccountRow } from '@/lib/account'
 
 import { WiredAccountRow, type RowWiring } from './RowWiring'
@@ -22,7 +23,7 @@ export function AccountsActionView({ kind, title, rows, onClear, wiring }: Props
   return (
     <section className="action-view" data-gsap-reveal>
       <div className="action-head">
-        <span className="action-dot" data-kind={kind} aria-hidden="true" />
+        <StatusDot state={kind === 'attn' ? 'danger' : 'warn'} />
         <span className="text-sm font-semibold">{title} · <span className="mono">{rows.length}</span></span>
         <span className="text-micro text-tertiary">{wiring.t('actionViewHint')}</span>
         <span className="spacer" />

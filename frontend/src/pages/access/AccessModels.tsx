@@ -10,6 +10,7 @@ import { ListPager } from '@/components/ui/ListPager'
 import { PAGE_SIZES, type PageSize } from '@/components/ui/pagination'
 import { PageAlert } from '@/components/ui/PageAlert'
 import { SearchBar } from '@/components/ui/SearchBar'
+import { SectionCard } from '@/components/ui/SectionCard'
 import { ProvidersPageSkeleton, ProvidersTableSkeleton } from '@/components/ui/skeletons'
 import { useI18n } from '@/hooks/I18nContext'
 import { useModelsCatalog } from '@/hooks/useModelsCatalog'
@@ -75,64 +76,57 @@ export function AccessModels() {
 
   return (
     <div id="models" className="space-y-4">
-      {/* 区块标题行（原型 section-title 形态）：标题 + 计数/说明 | 搜索 / 渠道筛选 / 刷新 */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold tracking-[-0.015em]">{t('navModels')}</h2>
-            <Chip size="sm" variant="soft">{filtered.length}</Chip>
-          </div>
-          <p className="mt-0.5 text-xs text-muted">
-            {catalog.models.length ? shownLabel : t('noModelsYet')}
-            {' · '}
-            {t('contextConfigHint')}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchBar
-            className="w-full min-w-0 sm:w-64"
-            value={filters.q}
-            onChange={filters.setQ}
-            placeholder={t('filterPh')}
-            ariaLabel={t('filter')}
-          />
-          <FilterSelect
-            ariaLabel={t('providerCol')}
-            value={filters.provider}
-            onChange={filters.setProvider}
-            options={[
-              { id: '', label: t('providerFilterAll') },
-              ...catalog.providerOptions.map((option) => ({
-                id: option.value,
-                label: accountProviderLabel(option.provider, option.region, t),
-              })),
-            ]}
-          />
-          <Button
-            size="sm"
-            variant="secondary"
-            isPending={catalog.refreshing}
-            onPress={() => void catalog.refresh()}
-          >
-            <ArrowClockwise size={14} />
-            {catalog.refreshing ? t('refreshing') : t('refresh')}
-          </Button>
-        </div>
-      </div>
-
       {catalog.message ? (
         <PageAlert status={catalog.messageError ? 'danger' : 'success'} title={catalog.message} />
       ) : null}
 
-      <section data-gsap-reveal className="overflow-hidden rounded-2xl border border-border bg-surface">
+      <SectionCard
+        title={<span className="flex items-center gap-2">{t('navModels')}<Chip size="sm" variant="soft">{filtered.length}</Chip></span>}
+        hint={<>{catalog.models.length ? shownLabel : t('noModelsYet')}{' · '}{t('contextConfigHint')}</>}
+        padded={false}
+        right={(
+          <>
+            <SearchBar
+              className="w-full min-w-0 sm:w-64"
+              value={filters.q}
+              onChange={filters.setQ}
+              placeholder={t('filterPh')}
+              ariaLabel={t('filter')}
+            />
+            <FilterSelect
+              ariaLabel={t('providerCol')}
+              value={filters.provider}
+              onChange={filters.setProvider}
+              options={[
+                { id: '', label: t('providerFilterAll') },
+                ...catalog.providerOptions.map((option) => ({
+                  id: option.value,
+                  label: accountProviderLabel(option.provider, option.region, t),
+                })),
+              ]}
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              isPending={catalog.refreshing}
+              onPress={() => void catalog.refresh()}
+            >
+              <ArrowClockwise size={14} />
+              {catalog.refreshing ? t('refreshing') : t('refresh')}
+            </Button>
+          </>
+        )}
+      >
         {catalog.refreshing || overviewLoading ? (
           <ProvidersTableSkeleton />
         ) : filtered.length === 0 ? (
-          <EmptyPanel
-            icon={<MagnifyingGlass size={22} />}
-            title={catalog.models.length ? t('noModelsMatch') : t('noProviders')}
-            hint={catalog.models.length ? (filters.q || filters.provider || t('noModelsMatch')) : t('noModelsYet')}
-          />
+          <div className="p-4">
+            <EmptyPanel
+              icon={<MagnifyingGlass size={22} />}
+              title={catalog.models.length ? t('noModelsMatch') : t('noProviders')}
+              hint={catalog.models.length ? (filters.q || filters.provider || t('noModelsMatch')) : t('noModelsYet')}
+            />
+          </div>
         ) : (
           <>
             <ModelCards
@@ -151,7 +145,7 @@ export function AccessModels() {
             />
           </>
         )}
-      </section>
+      </SectionCard>
 
       <ModelDetailsModal
         model={detailModel

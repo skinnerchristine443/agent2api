@@ -1,5 +1,5 @@
-/** 状态圆点语义（固定映射：ok=success、warn=warning、danger=danger）。 */
-export type StatusDotState = 'ok' | 'warn' | 'danger'
+/** 状态圆点语义（固定映射：ok=success、warn=warning、danger=danger、muted=中性灰）。 */
+export type StatusDotState = 'ok' | 'warn' | 'danger' | 'muted'
 
 type Props = {
   state: StatusDotState

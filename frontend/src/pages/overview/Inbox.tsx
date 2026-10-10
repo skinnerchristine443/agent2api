@@ -3,6 +3,7 @@ import { Chip } from '@heroui/react'
 import { Link } from 'react-router-dom'
 
 import { SectionCard } from '@/components/ui/SectionCard'
+import { StatusDot } from '@/components/ui/StatusDot'
 import { RankListSkeleton } from '@/components/ui/skeletons'
 import { useI18n } from '@/hooks/I18nContext'
 
@@ -41,7 +42,7 @@ export function Inbox({ events, loading }: { events: InboxEvent[]; loading: bool
           <div className="wb-inbox">
             {visible.map((event) => (
               <Link key={event.id} to={event.to} className="wb-inbox-item">
-                <span className="sev" data-sev={event.severity} />
+                <StatusDot state={event.severity === 'danger' ? 'danger' : 'warn'} />
                 <span className="txt truncate">
                   <b>{event.title}</b>
                   {event.providerLabel ? (<><span className="sep">·</span><span className="provider">{event.providerLabel}</span></>) : null}

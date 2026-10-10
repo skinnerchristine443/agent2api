@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { Drawer, Button, Chip, Tooltip } from '@heroui/react'
 import { CaretDown, SidebarSimple, X } from '@phosphor-icons/react'
 import { BrandMark } from '@/components/brand/BrandMark'
+import { StatusDot } from '@/components/ui/StatusDot'
 import { SkeletonBlock } from '@/components/ui/skeletons'
 import { gsap } from 'gsap'
 import { pressScale } from '@/hooks/useGsapReveal'
@@ -32,7 +33,7 @@ function writeOpenDomains(keys: string[]) {
 }
 
 function navRowClass(active: boolean) {
-  return `group/navitem relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] transition-colors will-change-transform ${
+  return `group/navitem relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors will-change-transform ${
     active ? 'bg-surface-secondary font-semibold text-foreground' : 'font-medium text-muted hover:bg-surface-secondary hover:text-foreground'
   }`
 }
@@ -251,7 +252,7 @@ function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`flex items-center gap-3 ${compact ? 'justify-center' : 'px-2'}`}>
       <BrandMark size={32} />
-      {!compact && <div><div className="text-[14px] font-semibold tracking-[-0.015em]">agent2api</div><div className="text-micro text-muted">{t('controlPlane')}</div></div>}
+      {!compact && <div><div className="text-sm font-semibold tracking-[-0.015em]">agent2api</div><div className="text-micro text-muted">{t('controlPlane')}</div></div>}
     </div>
   )
 }
@@ -308,7 +309,7 @@ export function AppSidebar({ mobileOpen, onClose }: Props) {
           <div className="rounded-xl border border-border bg-surface p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <span className="status-dot" data-state={healthy ? 'ok' : 'danger'} />
+                <StatusDot state={healthy ? 'ok' : 'danger'} />
                 {healthy ? t('running') : t('degraded')}
               </div>
               <Chip size="sm" variant="soft" color={healthy ? 'success' : 'warning'}>{hotCount}/{accountCount}</Chip>
@@ -330,7 +331,7 @@ export function AppSidebar({ mobileOpen, onClose }: Props) {
         <Tooltip>
           <Tooltip.Trigger>
             <Button isIconOnly size="sm" variant="ghost" className={collapsed ? '' : 'hidden'} aria-label={t('runtimeSnapshot')}>
-              {showStatusSkeleton ? <SkeletonBlock className="size-2" /> : <span className="status-dot" data-state={healthy ? 'ok' : 'danger'} />}
+              {showStatusSkeleton ? <SkeletonBlock className="size-2" /> : <StatusDot state={healthy ? 'ok' : 'danger'} />}
             </Button>
           </Tooltip.Trigger>
           <Tooltip.Content>{showStatusSkeleton ? t('refreshing') : healthy ? t('running') : t('degraded')}</Tooltip.Content>

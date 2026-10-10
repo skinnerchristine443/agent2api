@@ -4,12 +4,20 @@ import { Plus, X } from '@phosphor-icons/react'
 import { FilterSelect } from '@/components/ui/FilterSelect'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { Segmented } from '@/components/ui/Segmented'
+import { StatusDot, type StatusDotState } from '@/components/ui/StatusDot'
 import type { Translate } from '@/i18n/messages'
 
 import type { AccountQuickFilter, AccountSortMode, AccountStateFilter } from './useAccountFilters'
 
 /** 渠道页签（批次 8 起：workbuddy / trae；id 即渠道键，落 `?provider=`）。 */
 export type ChannelTab = { id: string; label: string; count: number }
+
+/** 快捷筛选 id → StatusDot 语义色（收敛原 `.qf-dot` 的三种 kind）。 */
+function quickDotState(id: string): StatusDotState {
+  if (id === 'avail') return 'ok'
+  if (id === 'attn') return 'danger'
+  return 'warn'
+}
 
 type Counts = { total: number; avail: number; attn: number; transit: number }
 
@@ -103,7 +111,7 @@ export function AccountsToolbar({
               >
                 <span className="n mono">{cell.count}</span>
                 <span className="l">
-                  {cell.id !== 'all' ? <span className="qf-dot" data-kind={cell.id} aria-hidden="true" /> : null}
+                  {cell.id !== 'all' ? <StatusDot state={quickDotState(cell.id)} /> : null}
                   {cell.label}
                 </span>
               </button>

@@ -1,6 +1,7 @@
-import { Card, Description, Input, Label } from '@heroui/react'
+import { Description, Input, Label } from '@heroui/react'
 import { SlidersHorizontal } from '@phosphor-icons/react'
 
+import { SettingCard } from '@/components/ui/SettingCard'
 import { useI18n } from '@/hooks/I18nContext'
 
 type Props = {
@@ -14,15 +15,8 @@ type Props = {
 export function ProxyCard({ draft, disabled, onDraftChange, onCommit }: Props) {
   const { t } = useI18n()
   return (
-    <Card data-gsap-reveal>
-      <div className="flex items-start gap-3">
-        <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-secondary text-foreground"><SlidersHorizontal size={15} /></div>
-        <div>
-          <h3 className="font-semibold">{t('proxySettingsTitle')}</h3>
-          <p className="mt-1 text-xs leading-5 text-muted">{t('proxySettingsHint')}</p>
-        </div>
-      </div>
-      <div className="mt-4 space-y-1.5">
+    <SettingCard icon={<SlidersHorizontal size={15} />} title={t('proxySettingsTitle')} hint={t('proxySettingsHint')}>
+      <div className="space-y-1.5">
         <Label className="text-sm font-medium text-muted">{t('proxyUrl')}</Label>
         <Input
           value={draft}
@@ -33,6 +27,6 @@ export function ProxyCard({ draft, disabled, onDraftChange, onCommit }: Props) {
         />
         <Description className="text-xs leading-5 text-muted">{t('proxyUrlHint')}</Description>
       </div>
-    </Card>
+    </SettingCard>
   )
 }

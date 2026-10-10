@@ -1,5 +1,6 @@
 import { Button, DateField, DateRangePicker, Label, RangeCalendar, TimeField, type TimeValue } from '@heroui/react'
 
+import { FilterBar } from '@/components/ui/FilterBar'
 import { FilterSearchSelect } from '@/components/ui/FilterSearchSelect'
 import { FilterSelect, type FilterSelectOption } from '@/components/ui/FilterSelect'
 import { FilterToggle } from '@/components/ui/FilterToggle'
@@ -44,7 +45,10 @@ export function LogsRequestsFilterBar({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <FilterBar
+        count={shownLabel}
+        actions={hasFilters ? <Button size="sm" variant="ghost" onPress={onClear}>{t('clearFilters')}</Button> : null}
+      >
         <FilterToggle
           value={filters.status}
           onChange={(next) => onChange({ status: next as RequestFilter })}
@@ -57,13 +61,7 @@ export function LogsRequestsFilterBar({
             { id: 'canceled', label: t('logsFilterCanceled') },
           ]}
         />
-        <div className="flex items-center gap-2">
-          {hasFilters ? (
-            <Button size="sm" variant="ghost" onPress={onClear}>{t('clearFilters')}</Button>
-          ) : null}
-          <div className="mono text-micro text-muted">{shownLabel}</div>
-        </div>
-      </div>
+      </FilterBar>
 
       <div className="flex flex-wrap items-center gap-2">
         <FilterSearchSelect

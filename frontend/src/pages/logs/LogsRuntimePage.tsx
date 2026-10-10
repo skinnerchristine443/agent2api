@@ -10,6 +10,7 @@ import { ListPager } from '@/components/ui/ListPager'
 import type { PageSize } from '@/components/ui/pagination'
 import { PageAlert } from '@/components/ui/PageAlert'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { StatusDot } from '@/components/ui/StatusDot'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { useSheetUrlParam } from '@/components/ui/useSheetUrlParam'
 import { useI18n } from '@/hooks/I18nContext'
@@ -108,7 +109,7 @@ export function LogsRuntimePage() {
           <div className="flex items-center gap-2 text-xs text-muted">
             {page === 1 ? (
               <>
-                <span className="status-dot" data-state="ok" />
+                <StatusDot state="ok" />
                 {t('logsAutoRefresh')}
               </>
             ) : null}

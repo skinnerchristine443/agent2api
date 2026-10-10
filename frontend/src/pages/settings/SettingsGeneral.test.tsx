@@ -52,7 +52,7 @@ describe('SettingsGeneral（通用页签）', () => {
   it('全局区块仍在：模型池 / 倍率优选 / 代理 / 路由策略 / 运行提醒', async () => {
     renderPage()
     await flush()
-    expect(screen.getByText('跨 Provider 模型池')).toBeTruthy()
+    expect(screen.getByText('跨渠道模型池')).toBeTruthy()
     expect(screen.getByText('倍率优选')).toBeTruthy()
     expect(screen.getByText('统一代理出口')).toBeTruthy()
     expect(screen.getByText('账号调度策略')).toBeTruthy()

@@ -141,7 +141,7 @@ function ExpiryRowCells({ row, open, highlight, refreshing, onToggle, onRefresh,
   if (total === 0) {
     return (
       <EmptyPanel
-        className="min-h-40 rounded-2xl border border-dashed border-border"
+        bordered
         title={t('expiryEmpty')}
         hint={t('expiryEmptyHint')}
       />
@@ -170,13 +170,13 @@ function ExpiryRowCells({ row, open, highlight, refreshing, onToggle, onRefresh,
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="text-micro font-medium tracking-[0.08em] text-muted uppercase">
-                      <th className="px-3 py-2 text-left font-medium">{t('expiryColAccount')}</th>
-                      <th className="px-3 py-2 text-left font-medium">{t('expiryColProvider')}</th>
-                      <th className="px-3 py-2 text-left font-medium">{t('expiryColExpiresAt')}</th>
-                      <th className="px-3 py-2 text-right font-medium">{t('expiryColRemaining')}</th>
-                      <th className="px-3 py-2 text-right font-medium">{t('expiryColPackages')}</th>
-                      <th className="px-3 py-2 text-right font-medium">{t('expiryColActions')}</th>
+                    <tr className="border-b border-separator bg-surface-sunken text-left">
+                      <th className="px-3 py-2 text-micro font-medium uppercase tracking-[0.08em] text-muted">{t('expiryColAccount')}</th>
+                      <th className="px-3 py-2 text-micro font-medium uppercase tracking-[0.08em] text-muted">{t('expiryColProvider')}</th>
+                      <th className="px-3 py-2 text-micro font-medium uppercase tracking-[0.08em] text-muted">{t('expiryColExpiresAt')}</th>
+                      <th className="px-3 py-2 text-right text-micro font-medium uppercase tracking-[0.08em] text-muted">{t('expiryColRemaining')}</th>
+                      <th className="px-3 py-2 text-right text-micro font-medium uppercase tracking-[0.08em] text-muted">{t('expiryColPackages')}</th>
+                      <th className="px-3 py-2 text-right text-micro font-medium uppercase tracking-[0.08em] text-muted">{t('expiryColActions')}</th>
                     </tr>
                   </thead>
                   <tbody>

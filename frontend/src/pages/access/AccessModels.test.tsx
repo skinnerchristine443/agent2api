@@ -54,7 +54,7 @@ describe('AccessModels 渲染冒烟', () => {
     expect((await screen.findAllByText('GLM 5.3')).length).toBeGreaterThan(0)
     expect(screen.getAllByText('Solo Coder').length).toBeGreaterThan(0)
     expect(screen.getAllByLabelText('筛选').length).toBeGreaterThan(0)
-    expect(screen.getAllByLabelText('供应商').length).toBeGreaterThan(0)
+    expect(screen.getAllByLabelText('渠道').length).toBeGreaterThan(0)
   })
 
   it('直链筛选生效：?q=solo 只保留命中模型', async () => {

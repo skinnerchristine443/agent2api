@@ -1,4 +1,5 @@
 import { VersionHistory } from '@/components/system/VersionHistory'
+import { SectionCard } from '@/components/ui/SectionCard'
 import { useI18n } from '@/hooks/I18nContext'
 import type { SystemUpdateFlow } from '@/hooks/useSystemUpdate'
 
@@ -12,10 +13,9 @@ export function VersionHistoryCard({ flow, onRestore }: { flow: SystemUpdateFlow
   if (!historyReleases.length) return null
 
   return (
-    <div data-gsap-reveal className="rounded-2xl border border-border bg-surface p-4">
-      <p className="text-xs leading-5 text-muted">{t('updateHistoryHint')}</p>
+    <SectionCard hint={t('updateHistoryHint')}>
       {info?.skipped_versions?.length ? (
-        <p className="mt-2 rounded-lg border border-warning/25 bg-warning/5 px-3 py-2 text-xs leading-5 text-muted">
+        <p className="mb-3 rounded-lg border border-warning/25 bg-warning/5 px-3 py-2 text-xs leading-5 text-muted">
           {t('skippedBetweenLabel')}
           {' '}
           <span className="mono">{info.skipped_versions.join(' → ')}</span>
@@ -30,6 +30,6 @@ export function VersionHistoryCard({ flow, onRestore }: { flow: SystemUpdateFlow
         submitting={submitting}
         onRestore={onRestore}
       />
-    </div>
+    </SectionCard>
   )
 }

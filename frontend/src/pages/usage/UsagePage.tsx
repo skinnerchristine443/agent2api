@@ -5,6 +5,7 @@ import { ObserveTabs } from '@/components/observe/ObserveTabs'
 import { EmptyPanel } from '@/components/ui/EmptyPanel'
 import { PageAlert } from '@/components/ui/PageAlert'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { SectionCard } from '@/components/ui/SectionCard'
 import { SkeletonBlock } from '@/components/ui/skeletons'
 import { UsageTrendChart } from '@/components/usage/UsageTrendChart'
 import { useAccountNameMap } from '@/hooks/useAccountNameMap'
@@ -73,14 +74,11 @@ export function UsagePage() {
         <>
           <UsageMetrics totals={stats.totals} />
 
-          <section className="rounded-2xl border border-border bg-surface p-4" data-gsap-reveal>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <div className="text-sm font-semibold">{t('usageTrend')}</div>
-                <div className="mt-0.5 text-xs text-muted">{t('usageTrendHint')}</div>
-              </div>
-              <Chip size="sm" variant="soft">{t('usageWindowAria')} · {windowLabel}</Chip>
-            </div>
+          <SectionCard
+            title={t('usageTrend')}
+            hint={t('usageTrendHint')}
+            right={<Chip size="sm" variant="soft">{t('usageWindowAria')} · {windowLabel}</Chip>}
+          >
             {stats.daily.length === 0 ? (
               <EmptyPanel title={t('usageEmptyDaily')} icon={<ChartLine size={20} />} />
             ) : (
@@ -91,7 +89,7 @@ export function UsagePage() {
                 requestsLabel={t('usageRequests')}
               />
             )}
-          </section>
+          </SectionCard>
 
           <div className="grid gap-5 xl:grid-cols-2">
             <UsageGroupTable

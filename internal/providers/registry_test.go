@@ -3,6 +3,7 @@ package providers
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestListIncludesEveryRegisteredDescriptor(t *testing.T) {
@@ -56,5 +57,27 @@ func TestListReturnsACopy(t *testing.T) {
 	if again[0].ID != originalID || again[0].Label != originalLabel {
 		t.Fatalf("List leaked its backing array: got %q/%q, want %q/%q",
 			again[0].ID, again[0].Label, originalID, originalLabel)
+	}
+}
+
+// TestCheckinPoliciesPinShanghaiTimezone 锁定签到窗口的时区语义：所有已声明
+// 签到策略的区域都必须在 Asia/Shanghai 解释 HH:MM。若退回进程本地时区
+// （容器为 UTC），"09:00" 会漂移成北京时间的下午——那是 2026-10-10 修掉的
+// 偏差，这条断言防止它回来。
+func TestCheckinPoliciesPinShanghaiTimezone(t *testing.T) {
+	for _, descriptor := range List() {
+		for _, region := range descriptor.Regions {
+			if region.Checkin == nil {
+				continue
+			}
+			if region.Checkin.Timezone != "Asia/Shanghai" {
+				t.Errorf("%s/%s check-in timezone = %q, want Asia/Shanghai",
+					descriptor.ID, region.ID, region.Checkin.Timezone)
+			}
+			if _, err := time.LoadLocation(region.Checkin.Timezone); err != nil {
+				t.Errorf("%s/%s check-in timezone %q does not load: %v",
+					descriptor.ID, region.ID, region.Checkin.Timezone, err)
+			}
+		}
 	}
 }

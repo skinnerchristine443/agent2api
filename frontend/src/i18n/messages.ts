@@ -32,7 +32,7 @@ const zh = {
     checkinDisabledAccountsHint: '开启后，停用聊天功能的账号仍可执行已开启的自动签到；停用账号仍不可手动签到。',
     checkinDisabledAccountsStatus: '当前状态',
     checkinDisabledAccountsAriaLabel: '允许停用账号自动签到',
-    checkinRecordSkipped: '活动未开放',
+    checkinRecordSkipped: '暂无可领积分包',
     navLogsRequests: '请求日志',
     navLogsRuntime: '运行日志',
     navUsage: '用量统计',

@@ -44,6 +44,23 @@ type leakedFunctionCall struct {
 
 // ExtractLeakedToolCalls 实现上文描述的泄漏恢复。
 func ExtractLeakedToolCalls(text string) (calls json.RawMessage, clean string, handled bool) {
+	return extractLeakedToolCalls(text)
+}
+
+// ExtractLeakedToolCallsNonStream 是非流式入口：在结构判定之外再加一条
+// 前提——非流式响应的 finish_reason 必须是 stop（或缺失）才做还原。
+// 若上游因长度截断（finish_reason=length）或其它原因收尾，落进正文的
+// 块必然是不完整的，此时还原只会制造假阳性，故原文回吐（fail-open）。
+// 流式路径不适用该前提：finish_reason 在流里是**独立的后续帧**，
+// 提取当下无从得知，故流式仍走无前提的 ExtractLeakedToolCalls。
+func ExtractLeakedToolCallsNonStream(text, finishReason string) (calls json.RawMessage, clean string, handled bool) {
+	if reason := strings.TrimSpace(finishReason); reason != "" && reason != "stop" {
+		return nil, text, false
+	}
+	return extractLeakedToolCalls(text)
+}
+
+func extractLeakedToolCalls(text string) (calls json.RawMessage, clean string, handled bool) {
 	if !strings.Contains(text, "DSML") {
 		return nil, text, false
 	}
@@ -57,6 +74,15 @@ func ExtractLeakedToolCalls(text string) (calls json.RawMessage, clean string, h
 		return nil, text, false
 	}
 	block := text[match[2]:match[3]]
+	// 硬前提：块内不得夹带正文。剥离全部 invoke 元素后，块体只应剩下
+	// 空白；一旦还留有非空白文本，它更像是在**谈论**标记格式而非真的
+	// 泄漏出一次调用——此时宁可原文回吐，也不误删正文（fail-open）。
+	if strings.TrimSpace(dsmlInvokeRe.ReplaceAllString(block, "")) != "" {
+		return nil, text, false
+	}
+	// 硬前提：块内不得夹带正文。剥离全部 invoke 元素后，块体只应剩下
+	// 空白；一旦还留有非空白文本，它更像是在**谈论**标记格式而非真的
+	// 泄漏出一次调用——此时宁可原文回吐，也不误删正文（fail-open）。
 	recovered := make([]leakedFunctionCall, 0, 2)
 	for index, invoke := range dsmlInvokeRe.FindAllStringSubmatch(block, -1) {
 		name := strings.TrimSpace(invoke[1])

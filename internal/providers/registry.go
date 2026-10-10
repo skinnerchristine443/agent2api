@@ -120,13 +120,13 @@ var WorkBuddy = ProviderDescriptor{
 			ID: "cn", Label: "CN", ChatBase: "https://copilot.tencent.com",
 			BillingBase: "https://www.codebuddy.cn", AuthBase: "https://copilot.tencent.com",
 			DefaultDomain: "codebuddy.cn",
-			Checkin:       &CheckinPolicy{Timezone: "Local"},
+			Checkin:       &CheckinPolicy{Timezone: "Asia/Shanghai"},
 		},
 		{
 			ID: "global", Label: "Global", ChatBase: "https://www.workbuddy.ai",
 			BillingBase: "https://www.workbuddy.ai", AuthBase: "https://www.workbuddy.ai",
 			DefaultDomain: "workbuddy.ai",
-			Checkin:       &CheckinPolicy{Timezone: "Local"},
+			Checkin:       &CheckinPolicy{Timezone: "Asia/Shanghai"},
 		},
 		{
 			// CodeBuddy Intl (IDE) realm 是第三个部署：Global token 在那里

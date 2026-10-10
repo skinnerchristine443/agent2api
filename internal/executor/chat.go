@@ -1088,7 +1088,7 @@ func recoverLeakedToolCalls(outcome providers.ChatOutcome) providers.ChatOutcome
 	if raw := outcome.ToolCalls; len(raw) > 0 && string(raw) != "null" && string(raw) != "[]" {
 		return outcome
 	}
-	calls, clean, handled := translate.ExtractLeakedToolCalls(outcome.Content)
+	calls, clean, handled := translate.ExtractLeakedToolCallsNonStream(outcome.Content, outcome.FinishReason)
 	if !handled {
 		return outcome
 	}

@@ -75,3 +75,25 @@ func TestExtractLeakedToolCallsOrdinaryReplyPassesThrough(t *testing.T) {
 		t.Fatalf("handled=%v clean=%q", handled2, clean2)
 	}
 }
+
+// 非流式：finish_reason 非 stop（如 length 截断）时不还原，原文回吐。
+func TestExtractLeakedToolCallsNonStreamRequiresStop(t *testing.T) {
+	if _, clean, handled := ExtractLeakedToolCallsNonStream(dsmlSample, "length"); handled || clean != dsmlSample {
+		t.Fatalf("length finish must pass through: handled=%v", handled)
+	}
+	if _, _, handled := ExtractLeakedToolCallsNonStream(dsmlSample, "stop"); !handled {
+		t.Fatal("stop finish with a clean block must be handled")
+	}
+	if _, _, handled := ExtractLeakedToolCallsNonStream(dsmlSample, ""); !handled {
+		t.Fatal("missing finish_reason must be handled")
+	}
+}
+
+// 块内夹带正文（更像「谈论标记格式」而非真泄漏）时不还原，原文回吐。
+func TestExtractLeakedToolCallsBlockWithProseIsNotHandled(t *testing.T) {
+	text := "说明如下：\n<｜DSML｜function_calls>\n这是解释文字\n<｜DSML｜invoke name=\"x\"><｜DSML｜parameter name=\"a\">1</｜DSML｜parameter></｜DSML｜invoke>\n</｜DSML｜function_calls>"
+	calls, clean, handled := ExtractLeakedToolCalls(text)
+	if handled || calls != nil || clean != text {
+		t.Fatalf("prose inside block must pass through: handled=%v clean=%q", handled, clean)
+	}
+}

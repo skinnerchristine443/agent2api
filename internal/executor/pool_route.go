@@ -302,22 +302,19 @@ type routeTier struct {
 // 比较会将任何非有限值视为平局（且 itemModelRate 会在非有限
 // 费率到达这里之前就拒绝它们，因此这是纵深防御）。
 func routeTierLess(a, b routeTier) bool {
+	// ① 主窗口（3d）内即将过期的额度：多的优先（先把会作废的额度用掉）。
+	if a.primary != b.primary {
+		return a.primary > b.primary
+	}
+	// ② 次窗口（7d）内即将过期的额度：多的优先。
+	if a.secondary != b.secondary {
+		return a.secondary > b.secondary
+	}
+	// ③ 费率升序：更便宜的优先；费率未知的排最后（不误当免费）。
 	if a.rateUnknown != b.rateUnknown {
 		return !a.rateUnknown
 	}
-	if a.rate < b.rate {
-		return true
-	}
-	if a.rate > b.rate {
-		return false
-	}
-	if a.primary > b.primary {
-		return true
-	}
-	if a.primary < b.primary {
-		return false
-	}
-	return a.secondary > b.secondary
+	return a.rate < b.rate
 }
 
 // routeTierTied 报告两个 tier 在 routeTierLess 下是否等价。
@@ -808,11 +805,12 @@ func (p *Pool) PickRoute(q RouteQuery) (Item, bool) {
 		}
 		return best, found
 	}
-	// 五层调度键：① 健康已在上方施加 → ② 消耗
-	// 费率升序（已知在未知之前）→ ③ 最快过期的配额优先
-	// （3d 主窗口，然后 7d 次窗口）→ ④ 区域稳定性 tiebreak
-	// （见下；是 best tier 内部的 tiebreak，而非硬性裁剪）→ ⑤ 现有的
-	// 按 ID 排序的轮询游标。②③ 只将候选集收窄到
+	// 六层调度键：① 健康已在上方施加 → ② 主窗口（3d）内最快过期
+	// 的额度优先（多的在前，先用作废在即的额度）→ ③ 次窗口（7d）
+	// 内最快过期的额度优先 → ④ 消耗费率升序（已知在未知之前）→
+	// ⑤ 区域稳定性 tiebreak（见下；是 best tier 内部的 tiebreak，
+	// 而非硬性裁剪）→ ⑥ 现有的按 ID 排序的轮询游标（叠加用户选的
+	// 轮询 / 加权 / 填满策略）。②③④ 只将候选集收窄到
 	// 最佳 tier；当它们处处平局时集合不变，轮询
 	// 行为与之前完全一致。
 	//

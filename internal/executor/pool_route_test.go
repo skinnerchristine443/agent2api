@@ -4,6 +4,8 @@ import (
 	"math"
 	"testing"
 	"time"
+
+	"agent2api/internal/accounts"
 )
 
 func TestPickRouteRespectsProviderFamilyAndCooldown(t *testing.T) {
@@ -544,5 +546,31 @@ func TestPickRouteSaturatedCheapAccountFallsBackToNextTier(t *testing.T) {
 
 	if got := mustPick(t, healthy, "glm-5.2"); got.ID != "cheap" {
 		t.Fatalf("healthy cheap account must win: got %s, want cheap", got.ID)
+	}
+}
+
+// 层级顺序（2026-10-10 调整）：主窗口（3d）内即将过期的额度优先于费率。
+// A 更便宜但无即将到期额度；B 更贵但有 3 天内将过期的额度 ⇒ 必须选 B
+// （先把会作废的额度用掉）。这是与旧顺序（费率优先）相反的方向。
+func TestPickRoutePrimaryExpiryBeatsRate(t *testing.T) {
+	p := NewPool()
+	now := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	p.SetClock(func() time.Time { return now })
+	// a：便宜（0.1），无即将到期额度。
+	p.Upsert(Item{ID: "a", URL: "http://a", Provider: "workbuddy", Runtime: "child_process"})
+	p.MergeModels("a", []string{"glm-5.2"})
+	p.MergeModelRates("a", map[string]float64{"glm-5.2": 0.1})
+	// b：贵（1.6），但有 1 天后到期的 100 额度。
+	p.Upsert(Item{
+		ID: "b", URL: "http://b", Provider: "workbuddy", Runtime: "child_process",
+		Quota: &accounts.QuotaSnapshot{Remaining: 100, Total: 100, Unit: "credits", Packages: []accounts.QuotaPackage{
+			{Remain: 100, Size: 100, Unit: "credits", EndsAt: now.Add(24 * time.Hour).Unix()},
+		}},
+	})
+	p.MergeModels("b", []string{"glm-5.2"})
+	p.MergeModelRates("b", map[string]float64{"glm-5.2": 1.6})
+
+	if got := mustPick(t, p, "glm-5.2"); got.ID != "b" {
+		t.Fatalf("主窗口过期优先应先选 b（有将过期额度），got %s", got.ID)
 	}
 }

@@ -8,13 +8,10 @@ import type { Translate } from '@/i18n/messages'
 import type { ProviderOption } from './providerOptions'
 import type { AddAccountPhase } from './types'
 
-type ImportOptions = { max_inflight: number; priority: number; drop_system_prompt: boolean }
-
 export type ImportFlowContext = {
   json: string
   name: string
   activeOption: ProviderOption | undefined
-  options: ImportOptions
   t: Translate
   setPhase: (phase: AddAccountPhase) => void
   setMessage: (message: string) => void
@@ -58,15 +55,13 @@ export async function submitImport(ctx: ImportFlowContext): Promise<void> {
   }
   try {
     setPhase('busy')
+    // 运行参数由后端取「渠道 × 区域」默认物化，不再随导入下发。
     await importAccount({
       ...bundle,
       name: ctx.name.trim() || bundle.name,
       enabled: true,
       provider: activeOption.provider,
       region: activeOption.region,
-      max_inflight: ctx.options.max_inflight,
-      priority: ctx.options.priority,
-      drop_system_prompt: ctx.options.drop_system_prompt,
     })
     setPhase('done')
     setMessage(t('accountImported'))
@@ -95,9 +90,6 @@ async function submitBatchImport(ctx: ImportFlowContext, items: unknown[]) {
           enabled: true,
           provider: activeOption.provider,
           region: activeOption.region,
-          max_inflight: ctx.options.max_inflight,
-          priority: ctx.options.priority,
-          drop_system_prompt: ctx.options.drop_system_prompt,
         }
       : item,
   )

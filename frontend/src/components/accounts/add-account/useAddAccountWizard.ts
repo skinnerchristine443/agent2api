@@ -5,8 +5,6 @@ import { useDeviceLoginPoll, type DeviceLoginOutcome } from '@/components/accoun
 import { useI18n } from '@/hooks/I18nContext'
 
 import {
-  parsedMaxInFlight,
-  parsedPriority,
   startBrowserFlow,
   submitCallbackFlow,
   submitPatFlow,
@@ -39,12 +37,7 @@ export function useAddAccountWizard({ isOpen, onClose, onAdded, presetProvider }
   const [accountType, setAccountType] = useState('')
   const [providerOptions, setProviderOptions] = useState<ProviderOption[]>([])
   const [typesLoading, setTypesLoading] = useState(false)
-  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [name, setName] = useState('')
-  const [maxInFlight, setMaxInFlight] = useState(4)
-  const [priority, setPriority] = useState(50)
-  const [dropSystemPrompt, setDropSystemPrompt] = useState(true)
-  const [proxyUrl, setProxyUrl] = useState('')
   const [pat, setPat] = useState('')
   const [json, setJson] = useState('')
   const [batchRows, setBatchRows] = useState<ImportBatchItem[]>([])
@@ -102,7 +95,6 @@ export function useAddAccountWizard({ isOpen, onClose, onAdded, presetProvider }
   const showPatTab = activeOption?.descriptor.capabilities?.pat_login !== false
   const showImportTab = activeOption?.descriptor.capabilities?.import_export !== false
   const hasBrowserLogin = activeOption?.descriptor.capabilities?.browser_login !== false
-  const showDropSystem = activeOption?.provider === 'workbuddy'
   const showCallbackPaste = activeOption?.provider === 'trae'
   const busy = phase === 'busy' || phase === 'polling'
   const hint = optionHint(activeOption, t)
@@ -120,14 +112,6 @@ export function useAddAccountWizard({ isOpen, onClose, onAdded, presetProvider }
     else if (showImportTab) setTab('import')
   }, [hasBrowserLogin, showImportTab, showPatTab])
 
-  function importOptions() {
-    return {
-      max_inflight: parsedMaxInFlight(maxInFlight),
-      priority: parsedPriority(priority),
-      drop_system_prompt: showDropSystem ? dropSystemPrompt : true,
-    }
-  }
-
   function reset() {
     cancelPoll()
     setStep('method')
@@ -136,13 +120,8 @@ export function useAddAccountWizard({ isOpen, onClose, onAdded, presetProvider }
     setProviderOptions([])
     setTypesLoading(false)
     setName('')
-    setMaxInFlight(4)
-    setPriority(50)
-    setDropSystemPrompt(true)
-    setProxyUrl('')
     setPat('')
     setJson('')
-    setAdvancedOpen(false)
     setPhase('idle')
     setMessage('')
     setAuthUrl('')
@@ -207,11 +186,6 @@ export function useAddAccountWizard({ isOpen, onClose, onAdded, presetProvider }
   const flow: WizardFlowContext = {
     activeOption,
     name,
-    proxyUrl,
-    dropSystemPrompt,
-    showDropSystem,
-    maxInFlight,
-    priority,
     createdId,
     deviceLogin,
     t,
@@ -238,7 +212,6 @@ export function useAddAccountWizard({ isOpen, onClose, onAdded, presetProvider }
     activeOption,
     hint,
     settingsLocked: Boolean(createdId.current) || busy,
-    showDropSystem,
     showCallbackPaste,
     hasBrowserLogin,
     showPatTab,
@@ -247,24 +220,14 @@ export function useAddAccountWizard({ isOpen, onClose, onAdded, presetProvider }
     pat,
     json,
     batchRows,
-    maxInFlight,
-    priority,
-    proxyUrl,
-    dropSystemPrompt,
-    advancedOpen,
     fileInput,
     // ── 视图回调 ──────────────────────────────────────────
     chooseProvider,
     backToMethod: () => setStep('method'),
     switchTab,
-    setAdvancedOpen,
     setName,
     setPat,
     setJson,
-    setMaxInFlight,
-    setPriority,
-    setProxyUrl,
-    setDropSystemPrompt,
     setCallbackUrl,
     onPickFile: () => fileInput.current?.click(),
     onFileChange,
@@ -276,7 +239,6 @@ export function useAddAccountWizard({ isOpen, onClose, onAdded, presetProvider }
       json,
       name,
       activeOption,
-      options: importOptions(),
       t,
       setPhase,
       setMessage,

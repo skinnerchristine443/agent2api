@@ -5,24 +5,9 @@ import type { Translate } from '@/i18n/messages'
 import type { ProviderOption } from './providerOptions'
 import type { AddAccountPhase } from './types'
 
-export function parsedMaxInFlight(value: number) {
-  if (!Number.isInteger(value) || value < 1 || value > 32) return 4
-  return value
-}
-
-export function parsedPriority(value: number) {
-  if (!Number.isInteger(value) || value < 1 || value > 100) return 50
-  return value
-}
-
 export type WizardFlowContext = {
   activeOption: ProviderOption | undefined
   name: string
-  proxyUrl: string
-  dropSystemPrompt: boolean
-  showDropSystem: boolean
-  maxInFlight: number
-  priority: number
   /** 首次创建的账号 id（同一次向导复用，避免重复建号）。 */
   createdId: { current: string }
   deviceLogin: DeviceLoginPoll
@@ -34,21 +19,14 @@ export type WizardFlowContext = {
   finish: () => void
 }
 
-export function createPayload(ctx: WizardFlowContext) {
-  return {
-    max_inflight: parsedMaxInFlight(ctx.maxInFlight),
-    priority: parsedPriority(ctx.priority),
-    drop_system_prompt: ctx.showDropSystem ? ctx.dropSystemPrompt : true,
-    proxy_url: ctx.proxyUrl.trim(),
-  }
-}
-
 /** 惰性建号：向导内多次尝试（浏览器 / PAT / 回调）复用同一个隔离运行时。 */
 export async function ensureAccount(ctx: WizardFlowContext): Promise<string> {
   if (ctx.createdId.current) return ctx.createdId.current
   const option = ctx.activeOption
   if (!option) throw new Error(ctx.t('accountTypeHint'))
-  const account = await createAccount(ctx.name.trim() || ctx.t('account'), option.provider, option.region, createPayload(ctx))
+  // 运行参数（最大并发 / 代理 / 丢弃系统提示词 / 日防护）不再随建号下发，
+  // 由后端取「渠道 × 区域」默认物化（见 internal/accounts/account_defaults.go）。
+  const account = await createAccount(ctx.name.trim() || ctx.t('account'), option.provider, option.region)
   const id = account?.id || account?.data?.id
   if (!id) throw new Error('create account returned no id')
   ctx.createdId.current = id

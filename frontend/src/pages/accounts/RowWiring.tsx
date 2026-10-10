@@ -39,7 +39,7 @@ export function WiredAccountRow({ account, wiring }: { account: AccountRow; wiri
       onViewCheckins={checkinPolicy ? () => wiring.handlers.onViewCheckins(account.id) : undefined}
       onClearCooldowns={() => wiring.handlers.onClearCooldowns(account.id)}
       onRename={() => wiring.handlers.onRename(account.id)}
-      onPriorityChange={(priority) => wiring.handlers.onPriorityChange(account.id, priority)}
+      onOpenSettings={() => wiring.handlers.onOpenSettings(account.id)}
       onToggleAuthPanel={hasLoginAction(wiring.providers, account) || capabilities !== null ? () => wiring.handlers.onToggleAuthPanel(account.id) : undefined}
       onViewModels={() => wiring.handlers.onViewModels(account.id)}
     />

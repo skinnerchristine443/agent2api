@@ -45,3 +45,8 @@
 # Windows 批处理必须保持 CRLF
 *.bat text eol=crlf
 *.cmd text eol=crlf
+
+# 前端构建产物（Vite 打包，已内嵌进 Go 二进制，随每次构建重生成并提交以便
+# `go build` 自包含）：标记为「生成物」，使 GitHub Linguist **不计入语言统计**
+# ——语言比例应反映源码（Go / TypeScript），而非打包后的 JS/CSS 产物。
+internal/webui/static/** linguist-generated=true -linguist-detectable

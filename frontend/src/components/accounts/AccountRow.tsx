@@ -1,6 +1,6 @@
 import type { Translate } from '@/i18n/messages'
 import { useEffect, useRef } from 'react'
-import { Button, Dropdown, NumberField, Tooltip } from '@heroui/react'
+import { Button, Dropdown, Tooltip } from '@heroui/react'
 import {
   ArrowClockwise,
   CalendarCheck,
@@ -10,6 +10,7 @@ import {
   Key,
   ListBullets,
   PencilSimple,
+  SortAscending,
   TrashSimple,
   WarningCircle,
 } from '@phosphor-icons/react'
@@ -52,16 +53,18 @@ type Props = {
   onRefresh?: () => void
   onDelete: () => void
   onToggle: (selected: boolean) => void
-  onToggleModelRequests?: (selected: boolean) => void
   onToggleAutoCheckin?: (selected: boolean) => void
   onCheckin?: () => void
   onViewCheckins?: () => void
   onClearCooldowns?: () => void
-  /** ⋯ 菜单：重命名（编辑弹窗移除后唯一的改名入口）。 */
+  /** ⋯ 菜单：重命名。 */
   onRename?: () => void
-  /** 认证方式列：点击打开认证模态（设备登录 / PAT / 回调）。 */
+  /** ⋯ 菜单：认证方式（打开认证模态）。 */
   onToggleAuthPanel?: () => void
-  onPriorityChange?: (priority: number) => void
+  /** ⋯ 菜单：设置（优先级）。 */
+  onOpenSettings?: () => void
+  /** ⋯ 菜单：接收模型请求开关。 */
+  onToggleModelRequests?: (selected: boolean) => void
   onViewModels: () => void
 }
 
@@ -87,21 +90,12 @@ function stateTone(state: ReturnType<typeof accountState>): 'ok' | 'warn' | 'dan
   return 'muted'
 }
 
-/** 认证方式列文案：账号未认证时提示需要认证，否则展示认证方式本身。 */
-function authLabelFor(account: AccountRow, t: Translate): string {
-  const kind = String(account.auth_type || 'none').toLowerCase()
-  if (kind === 'none' || kind === '') return t('needLogin')
-  if (kind === 'pat') return t('pat')
-  if (kind === 'oauth' || kind === 'device') return t('oauthDeviceFlow')
-  return kind
-}
-
 /**
  * 账号池行：单行承载全部信息与操作，**不再展开**（设计决策 2026-10-10）。
  *
- * 行内列：标记 · 账号 · 运行状态 · 认证方式 · 优先级 · 接收模型请求 ·
- * 自动签到 · 签到结果 · 立即签到 · 额度 · 最近错误 · 刷新 · ⋯ · 启用状态。
- * 运行参数（最大并发 / 代理 / 丢弃系统提示词 / 四道日限额）已迁到设置，不再逐账号展示。
+ * 列（2026-10-10 重排，缓解过挤）：标记 · 账号 · 运行状态 · 额度 · 自动签到 ·
+ * 签到结果 · 最近错误 · 刷新 · 签到（立即）· 启用状态 · 删除 · 更多操作。
+ * 认证方式 / 优先级 / 接收模型请求 / 可用模型 / 签到记录 收进「⋯ 更多操作」菜单。
  */
 export function AccountRowItem({
   account,
@@ -112,14 +106,14 @@ export function AccountRowItem({
   onRefresh,
   onDelete,
   onToggle,
-  onToggleModelRequests,
   onToggleAutoCheckin,
   onCheckin,
   onViewCheckins,
   onClearCooldowns,
   onRename,
   onToggleAuthPanel,
-  onPriorityChange,
+  onOpenSettings,
+  onToggleModelRequests,
   onViewModels,
 }: Props) {
   const state = accountState(account)
@@ -151,7 +145,6 @@ export function AccountRowItem({
   const quotaUnit = account.quota?.unit || ''
   const quotaAmount = quotaRemainValue != null && Number.isFinite(quotaRemainValue) ? formatQuotaAmount(quotaRemainValue) : ''
   const quotaAmountTitle = quotaAmount ? `${t('quotaRemaining')} ${quotaAmount}${quotaUnit ? ` ${quotaUnit}` : ''}` : ''
-  const priority = Number.isFinite(account.priority) ? Number(account.priority) : 50
   // 行内签到列：短标签 + 状态点色。
   const rowCheckinLabel = checkinStatus === 'success' ? 'checkinRecordSuccess' : checkinStatus === 'already' ? 'checkinRecordAlready' : checkinStatus === 'skipped' ? 'checkinRecordSkipped' : checkinStatus === 'error' ? 'checkinRecordFailed' : 'acctCheckinNone'
   const checkinTone = checkinStatus === 'success' || checkinStatus === 'already' ? 'ok' : checkinStatus === 'error' ? 'danger' : checkinStatus === 'skipped' ? 'warn' : 'muted'
@@ -160,6 +153,10 @@ export function AccountRowItem({
     account.last_checkin_at ? new Date(account.last_checkin_at).toLocaleString() : '',
     account.last_checkin_msg || '',
   ].filter(Boolean).join(' · ')
+  // ⋯ 菜单里的开关 / 动作：拒绝空菜单（无任何动作时不渲染触发器）。
+  const hasMenu = Boolean(
+    onViewModels || onClearCooldowns || onExport || onViewCheckins || onRename || onToggleAuthPanel || onOpenSettings || onToggleModelRequests,
+  )
 
   return (
     <div ref={rootRef} className="acct-item" data-state={state} data-focus={focus ? 'true' : undefined}>
@@ -175,58 +172,23 @@ export function AccountRowItem({
           <span className="status-dot" data-state={tone} />
           <span className="w truncate">{stateCopy}</span>
         </span>
-        {/* 认证方式列：按钮打开认证模态（设备登录 / PAT / 回调）。 */}
-        <span className="col-auth">
-          {onToggleAuthPanel ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              isDisabled={!account.enabled}
-              onPress={onToggleAuthPanel}
-              aria-label={t('authentication')}
-            >
-              <Key size={13} />
-              <span className="truncate">{authLabelFor(account, t)}</span>
-            </Button>
+        {/* 额度（批次 15 重排：自后段前移到运行状态之后）。 */}
+        <span className="quota-cell">
+          {quota ? (
+            <>
+              <span className="quota-mini" aria-hidden="true">
+                <span className="quota-mini__fill" data-tone={quota.tone} style={{ width: `${quota.remaining}%` }} />
+              </span>
+              <span className="mono text-xs text-secondary">{quota.exceeded ? t('quotaExceeded') : `${quota.remaining}%`}</span>
+              {quotaAmount ? (
+                <span className="mono shrink-0 text-xs text-tertiary" title={quotaAmountTitle}>{quotaAmount}</span>
+              ) : null}
+            </>
           ) : (
-            <span className="text-xs text-tertiary">—</span>
+            <span className="text-xs text-tertiary">{state === 'hot' || state === 'ready' || state === 'loading' || state === 'starting' ? t('quotaLoading') : t('quotaUnavailable')}</span>
           )}
         </span>
-        {/* 优先级列：行内可编辑（账号级；不迁设置）。 */}
-        <span className="col-priority">
-          {onPriorityChange ? (
-            <NumberField
-              value={priority}
-              onChange={(value) => {
-                const next = value ?? priority
-                if (next !== priority) onPriorityChange(next)
-              }}
-              minValue={1}
-              maxValue={100}
-              isDisabled={Boolean(busyKind)}
-              aria-label={t('priority')}
-            >
-              <NumberField.Group>
-                <NumberField.DecrementButton />
-                <NumberField.Input />
-                <NumberField.IncrementButton />
-              </NumberField.Group>
-            </NumberField>
-          ) : (
-            <span className="mono text-xs">{priority}</span>
-          )}
-        </span>
-        {/* 接收模型请求（行内开关）。 */}
-        <span className="col-sw-models">
-          {onToggleModelRequests ? (
-            <CompactSwitch
-              isSelected={account.model_requests_enabled !== false}
-              isDisabled={busyKind === 'toggle'}
-              ariaLabel={t('modelRequests')}
-              onChange={onToggleModelRequests}
-            />
-          ) : null}
-        </span>
+        {/* 自动签到（行内开关）。 */}
         <span className="col-sw-checkin">
           {onToggleAutoCheckin ? (
             <CompactSwitch
@@ -244,41 +206,6 @@ export function AccountRowItem({
               <span className="w truncate">{t(rowCheckinLabel)}</span>
             </span>
           ) : null}
-        </span>
-        <span className="ck-now">
-          {onCheckin ? (
-            <Tooltip>
-              <Tooltip.Trigger>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="ghost"
-                  isPending={busyKind === 'checkin'}
-                  isDisabled={!account.enabled || busyKind === 'checkin'}
-                  onPress={onCheckin}
-                  aria-label={t('checkinNow')}
-                >
-                  <CalendarCheck size={14} />
-                </Button>
-              </Tooltip.Trigger>
-              <Tooltip.Content>{account.enabled ? t('checkinNow') : t('disabled')}</Tooltip.Content>
-            </Tooltip>
-          ) : null}
-        </span>
-        <span className="quota-cell">
-          {quota ? (
-            <>
-              <span className="quota-mini" aria-hidden="true">
-                <span className="quota-mini__fill" data-tone={quota.tone} style={{ width: `${quota.remaining}%` }} />
-              </span>
-              <span className="mono text-xs text-secondary">{quota.exceeded ? t('quotaExceeded') : `${quota.remaining}%`}</span>
-              {quotaAmount ? (
-                <span className="mono shrink-0 text-xs text-tertiary" title={quotaAmountTitle}>{quotaAmount}</span>
-              ) : null}
-            </>
-          ) : (
-            <span className="text-xs text-tertiary">{state === 'hot' || state === 'ready' || state === 'loading' || state === 'starting' ? t('quotaLoading') : t('quotaUnavailable')}</span>
-          )}
         </span>
         <span className="acct-error">
           {lastError ? (
@@ -312,34 +239,27 @@ export function AccountRowItem({
             </Tooltip>
           ) : null}
         </span>
-        {/* ⋯ 溢出菜单（自展开区迁入）：查看模型 / 清冷却 / 导出 / 签到记录 / 重命名。 */}
-        <span className="col-more">
-          <Dropdown>
-            <Dropdown.Trigger className="button button--icon-only button--sm button--ghost" aria-label={t('more')}>
-              <DotsThreeVertical size={16} />
-            </Dropdown.Trigger>
-            <Dropdown.Popover placement="bottom end">
-              <Dropdown.Menu
-                aria-label={t('more')}
-                onAction={(key) => {
-                  if (key === 'models') onViewModels()
-                  if (key === 'cooldowns') onClearCooldowns?.()
-                  if (key === 'export') onExport()
-                  if (key === 'checkins') onViewCheckins?.()
-                  if (key === 'rename') onRename?.()
-                }}
-              >
-                <Dropdown.Item id="models" textValue={t('accountModels')}><Cube size={15} />{t('accountModels')}</Dropdown.Item>
-                {onClearCooldowns && (cooldown || modelCooldowns.length > 0) ? (
-                  <Dropdown.Item id="cooldowns" textValue={t('clearCooldown')}><ArrowClockwise size={15} />{t('clearCooldown')}</Dropdown.Item>
-                ) : null}
-                {account.auth_type !== 'none' ? <Dropdown.Item id="export" textValue={t('export')}><Copy size={15} />{t('export')}</Dropdown.Item> : null}
-                {onViewCheckins ? <Dropdown.Item id="checkins" textValue={t('checkinRecords')}><ListBullets size={15} />{t('checkinRecords')}</Dropdown.Item> : null}
-                {onRename ? <Dropdown.Item id="rename" textValue={t('renameAccount')}><PencilSimple size={15} />{t('renameAccount')}</Dropdown.Item> : null}
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown>
+        <span className="ck-now">
+          {onCheckin ? (
+            <Tooltip>
+              <Tooltip.Trigger>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  isPending={busyKind === 'checkin'}
+                  isDisabled={!account.enabled || busyKind === 'checkin'}
+                  onPress={onCheckin}
+                  aria-label={t('checkinNow')}
+                >
+                  <CalendarCheck size={14} />
+                </Button>
+              </Tooltip.Trigger>
+              <Tooltip.Content>{account.enabled ? t('checkinNow') : t('disabled')}</Tooltip.Content>
+            </Tooltip>
+          ) : null}
         </span>
+        {/* 启用状态（开关，无文字标签）。 */}
         <span className="col-enabled">
           <CompactSwitch
             isSelected={Boolean(account.enabled)}
@@ -347,9 +267,60 @@ export function AccountRowItem({
             ariaLabel={account.enabled ? t('disable') : t('enable')}
             onChange={onToggle}
           />
+        </span>
+        {/* 删除（独立列；danger 图标按钮 + 确认弹窗）。 */}
+        <span className="col-delete">
           <Button isIconOnly size="sm" variant="ghost" className="text-danger" isDisabled={Boolean(busyKind)} onPress={onDelete} aria-label={t('delete')}>
             <TrashSimple size={14} />
           </Button>
+        </span>
+        {/* ⋯ 更多操作：重命名 / 签到记录 / 认证方式 / 优先级 / 接收模型请求 / 可用模型。 */}
+        <span className="col-more">
+          {hasMenu ? (
+            <Dropdown>
+              <Dropdown.Trigger className="button button--icon-only button--sm button--ghost" aria-label={t('more')}>
+                <DotsThreeVertical size={16} />
+              </Dropdown.Trigger>
+              <Dropdown.Popover placement="bottom end">
+                <Dropdown.Menu
+                  aria-label={t('more')}
+                  onAction={(key) => {
+                    if (key === 'rename') onRename?.()
+                    if (key === 'checkins') onViewCheckins?.()
+                    if (key === 'auth') onToggleAuthPanel?.()
+                    if (key === 'priority') onOpenSettings?.()
+                    if (key === 'modelRequests') onToggleModelRequests?.(!(account.model_requests_enabled !== false))
+                    if (key === 'models') onViewModels()
+                    if (key === 'cooldowns') onClearCooldowns?.()
+                    if (key === 'export') onExport()
+                  }}
+                >
+                  {onRename ? <Dropdown.Item id="rename" textValue={t('renameAccount')}><PencilSimple size={15} />{t('renameAccount')}</Dropdown.Item> : null}
+                  {onViewCheckins ? <Dropdown.Item id="checkins" textValue={t('checkinRecords')}><ListBullets size={15} />{t('checkinRecords')}</Dropdown.Item> : null}
+                  {onToggleAuthPanel ? <Dropdown.Item id="auth" textValue={t('authentication')}><Key size={15} />{t('authentication')}</Dropdown.Item> : null}
+                  {onOpenSettings ? <Dropdown.Item id="priority" textValue={t('priority')}><SortAscending size={15} />{t('priority')}</Dropdown.Item> : null}
+                  {onToggleModelRequests ? (
+                    <Dropdown.Item id="modelRequests" textValue={t('modelRequests')}>
+                      <span className="mr-1.5 inline-flex align-middle">
+                        <CompactSwitch
+                          isSelected={account.model_requests_enabled !== false}
+                          isDisabled={busyKind === 'toggle'}
+                          ariaLabel={t('modelRequests')}
+                          onChange={onToggleModelRequests}
+                        />
+                      </span>
+                      {t('modelRequests')}
+                    </Dropdown.Item>
+                  ) : null}
+                  <Dropdown.Item id="models" textValue={t('accountModels')}><Cube size={15} />{t('accountModels')}</Dropdown.Item>
+                  {onClearCooldowns && (cooldown || modelCooldowns.length > 0) ? (
+                    <Dropdown.Item id="cooldowns" textValue={t('clearCooldown')}><ArrowClockwise size={15} />{t('clearCooldown')}</Dropdown.Item>
+                  ) : null}
+                  {account.auth_type !== 'none' ? <Dropdown.Item id="export" textValue={t('export')}><Copy size={15} />{t('export')}</Dropdown.Item> : null}
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown>
+          ) : null}
         </span>
       </div>
     </div>

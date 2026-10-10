@@ -56,17 +56,15 @@ export function AccountsList({ rows, sort, wiring }: Props) {
         <span />
         <span>{t('accountCount')}</span>
         <span>{t('runtimeState')}</span>
-        <span>{t('authentication')}</span>
-        <span>{t('priority')}</span>
-        <span className="col-sw-models">{t('modelRequests')}</span>
+        <span>{t('quota')}</span>
         <span className="col-sw-checkin">{t('acctColAutoCheckin')}</span>
         <span>{t('acctColCheckinResult')}</span>
-        <span>{t('checkinNow')}</span>
-        <span>{t('quota')}</span>
         <span>{t('recentError')}</span>
         <span>{t('refreshAccount')}</span>
-        <span>{t('more')}</span>
+        <span>{t('checkinNow')}</span>
         <span>{t('acctColEnabled')}</span>
+        <span>{t('delete')}</span>
+        <span>{t('more')}</span>
       </div>
 
       {paging.slice.map((account) => (

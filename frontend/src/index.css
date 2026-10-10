@@ -382,8 +382,9 @@ body {
 }
 
 /* ============================================================================
-   账号池列表（批次 8 页签化：渠道由页签承担，列表不再分组 / 操作列常显 /
-   行含签到列）：8 列 = 标记 · 名称 · 状态 · 开关 · 签到 · 额度 · 错误 · 操作
+   账号池列表（批次 16 列重排：认证 / 优先级 / 模型请求 入 ⋯ 菜单；额度前移；
+   启用与删除拆列）：12 列 = 标记 · 账号 · 状态 · 额度 · 自动签到 · 签到结果 ·
+   最近错误 · 刷新 · 签到 · 启用 · 删除 · 更多
    ============================================================================ */
 .acct-list {
   display: flex;
@@ -398,7 +399,7 @@ body {
   top: 0;
   z-index: 2;
   display: grid;
-  grid-template-columns: 16px minmax(110px, 1.2fr) 92px 96px 76px 58px 58px 80px 40px minmax(96px, 1fr) minmax(104px, 1.3fr) 40px 34px 84px;
+  grid-template-columns: 16px minmax(110px, 1.2fr) 92px minmax(96px, 1fr) 58px 80px minmax(104px, 1.3fr) 40px 40px 48px 34px 34px;
   align-items: center;
   gap: 10px;
   min-height: 30px;
@@ -419,7 +420,7 @@ body {
 
 .acct-row {
   display: grid;
-  grid-template-columns: 16px minmax(110px, 1.2fr) 92px 96px 76px 58px 58px 80px 40px minmax(96px, 1fr) minmax(104px, 1.3fr) 40px 34px 84px;
+  grid-template-columns: 16px minmax(110px, 1.2fr) 92px minmax(96px, 1fr) 58px 80px minmax(104px, 1.3fr) 40px 40px 48px 34px 34px;
   align-items: center;
   gap: 10px;
   height: 40px;
@@ -479,11 +480,9 @@ body {
   font-size: 12px;
 }
 
-/* 行内开关列（批次 9 拆列）：签到 / 模型各占一列（表头分别标注，列内不带文字）；
-   ≥1280px 在行上展示，更窄宽度隐藏并回落展开卡内的同名开关
-   （.row-switches-fallback，见下方 media）。 */
-.col-sw-checkin,
-.col-sw-models {
+/* 行内自动签到开关列（批次 9 拆列；批次 16 认证 / 模型请求入 ⋯ 菜单后仅存此列）：
+   ≥1280px 在行上展示，更窄宽度隐藏（见下方 media）。 */
+.col-sw-checkin {
   display: flex;
   align-items: center;
   min-width: 0;
@@ -508,8 +507,15 @@ body {
 .col-enabled {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: center;
+  min-width: 0;
+}
+
+/* 删除列（批次 16：自「启用状态」拆出独立列）。 */
+.col-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
 }
 
@@ -540,31 +546,8 @@ body {
   min-width: 0;
 }
 
-/* 认证方式列：按钮打开认证模态（原展开区迁入）。 */
-.col-auth {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.col-auth button {
-  max-width: 100%;
-  min-width: 0;
-}
-
-/* 优先级列：行内可编辑的数字输入（账号级）。 */
-.col-priority {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.col-priority [role='group'],
-.col-priority > * {
-  min-width: 0;
-}
-
-/* ⋯ 溢出菜单列（原展开区迁入）。 */
+/* ⋯ 溢出菜单列（原展开区迁入；批次 16 起承载 重命名 / 签到记录 / 认证方式 /
+   优先级 / 接收模型请求 / 可用模型）。 */
 .col-more {
   display: flex;
   align-items: center;
@@ -607,23 +590,19 @@ body {
   background: var(--danger);
 }
 
-/* 行内开关列的宽度回落（批次 7；批次 9 扩到两列）：<1280px 隐藏「签到 / 模型」
-   开关列并同步收缩列模板（表头与行必须一致）；签到结果 / 立即签到 / 刷新 / 启用等列不回落。 */
+/* 列宽回落（批次 7；批次 9 两开关列；批次 16 重排后 <1280px 隐藏「自动签到」
+   开关列与「删除」列并同步收缩列模板（表头与行必须一致）；认证 / 优先级 /
+   模型请求 已入 ⋯ 菜单，不再占列。 */
 @media (max-width: 1279px) {
   .acct-head,
   .acct-row {
-    grid-template-columns: 16px minmax(110px, 1.2fr) 92px 96px 76px 80px 40px minmax(96px, 1fr) minmax(104px, 1.3fr) 40px 34px 84px;
+    grid-template-columns: 16px minmax(110px, 1.2fr) 92px minmax(96px, 1fr) 80px minmax(104px, 1.3fr) 40px 40px 48px 34px;
   }
 
   .acct-head .col-sw-checkin,
-  .acct-head .col-sw-models,
   .acct-row .col-sw-checkin,
-  .acct-row .col-sw-models {
-    display: none;
-  }
-  /* 优先级列在窄屏让位（设置里仍可改；列表内联编辑在 <1280px 收起）。 */
-  .acct-head .col-priority,
-  .acct-row .col-priority {
+  .acct-head .col-delete,
+  .acct-row .col-delete {
     display: none;
   }
 }
@@ -646,8 +625,7 @@ body {
   .acct-row .ck-result,
   .acct-row .ck-now,
   .acct-row .col-refresh,
-  .acct-row .col-auth,
-  .acct-row .col-priority,
+  .acct-row .col-delete,
   .acct-row .col-more,
   .acct-row .col-enabled {
     grid-column: 2 / 4;

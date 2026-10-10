@@ -41,16 +41,18 @@ export type AccountHandlers = {
   onCheckin: (id: string) => void
   onClearCooldowns: (id: string) => void
   onDelete: (id: string) => void
-  /** 优先级：列表列内联修改（账号级；不迁设置）。 */
-  onPriorityChange: (id: string, priority: number) => void
   onViewModels: (id: string) => void
   onViewCheckins: (id: string) => void
-  /** 打开认证模态（认证方式列）。 */
+  /** 打开认证模态（⋯ 更多操作菜单 → 认证方式）。 */
   onToggleAuthPanel: (id: string) => void
   /** ⋯ 菜单：打开重命名模态。 */
   onRename: (id: string) => void
+  /** ⋯ 菜单：打开设置（优先级）模态。 */
+  onOpenSettings: (id: string) => void
   /** 重命名提交。 */
   onSaveName: (id: string, name: string) => Promise<void>
+  /** 优先级提交（设置模态）。 */
+  onSavePriority: (id: string, priority: number) => Promise<void>
 }
 
 /** useAsyncAction 的执行体：统一在途标记与失败文案（迁移前 run() 模式）。 */
@@ -165,14 +167,6 @@ export function createAccountHandlers({
     dispatch({ type: 'panel', panel: 'auth', id: opening ? id : null })
   }
 
-  function onPriorityChange(id: string, priority: number) {
-    const next = Math.min(100, Math.max(1, Math.trunc(priority)))
-    dispatch({ type: 'override', id, patch: { priority: next } })
-    void run(id, 'settings', () => pool.saveSettings(id, { priority: next })).finally(() => {
-      dispatch({ type: 'clearOverride', id })
-    })
-  }
-
   return {
     onPatChange: (id, value) => patch(id, { pat: value }),
     onCallbackChange: (id, value) => patch(id, { callback: value }),
@@ -190,15 +184,24 @@ export function createAccountHandlers({
     onCheckin: (id) => void run(id, 'checkin', () => pool.checkin(id)),
     onClearCooldowns: (id) => void run(id, 'cooldowns', () => pool.clearCooldowns(id)),
     onDelete,
-    onPriorityChange,
     onViewModels: (id) => dispatch({ type: 'panel', panel: 'models', id }),
     onViewCheckins: (id) => dispatch({ type: 'panel', panel: 'checkins', id }),
     onToggleAuthPanel,
     onRename: (id) => dispatch({ type: 'panel', panel: 'rename', id }),
+    onOpenSettings: (id) => dispatch({ type: 'panel', panel: 'settings', id }),
     onSaveName: async (id, name) => {
       dispatch({ type: 'override', id, patch: { name } })
       try {
         await pool.saveSettings(id, { name })
+      } finally {
+        dispatch({ type: 'clearOverride', id })
+      }
+    },
+    onSavePriority: async (id, priority) => {
+      const next = Math.min(100, Math.max(1, Math.trunc(priority)))
+      dispatch({ type: 'override', id, patch: { priority: next } })
+      try {
+        await pool.saveSettings(id, { priority: next })
       } finally {
         dispatch({ type: 'clearOverride', id })
       }

@@ -2,6 +2,7 @@ import { AccountCheckinRecordsModal } from '@/components/accounts/AccountCheckin
 import { AccountModelsModal } from '@/components/accounts/AccountModelsModal'
 import { AddAccountModal } from '@/components/accounts/add-account/AddAccountModal'
 import { AccountAuthModal } from '@/components/accounts/AccountAuthModal'
+import { AccountSettingsModal } from '@/components/accounts/AccountSettingsModal'
 import { RenameAccountModal } from '@/components/accounts/RenameAccountModal'
 import type { ProviderDescriptor } from '@/api/overview'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -53,6 +54,8 @@ export function AccountsModals({
   const checkinAccount = accountOf(panels.checkins)
   const renameAccount = accountOf(panels.rename)
   const renameId = panels.rename || ''
+  const settingsAccount = accountOf(panels.settings)
+  const settingsId = panels.settings || ''
   const authAccount = accountOf(panels.auth)
   const authId = panels.auth || ''
   const authTransient = authId ? transients[authId] || {} : {}
@@ -102,6 +105,14 @@ export function AccountsModals({
         t={t}
         onClose={() => onClosePanel('rename')}
         onSave={(name) => handlers.onSaveName(renameId, name)}
+      />
+      <AccountSettingsModal
+        key={`settings:${panels.settings ?? 'closed'}`}
+        account={settingsAccount}
+        busy={Boolean(busy && busy.id === settingsId && busy.kind === 'settings')}
+        t={t}
+        onClose={() => onClosePanel('settings')}
+        onSave={(priority) => handlers.onSavePriority(settingsId, priority)}
       />
       <ConfirmDialog
         isOpen={Boolean(confirmAccount)}

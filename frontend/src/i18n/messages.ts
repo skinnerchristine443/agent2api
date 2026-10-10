@@ -648,6 +648,7 @@ const zh = {
     addAccount: '添加账号',
     accountName: '账号名称',
     renameAccount: '重命名',
+    accountSettings: '账号设置',
     runtimeNoticesTitle: '运行提醒',
     runtimeNoticesHint: '保活与告警通知出口。',
     keepaliveEnabled: '保活',

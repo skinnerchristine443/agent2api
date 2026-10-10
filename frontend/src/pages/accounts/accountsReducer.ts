@@ -18,8 +18,8 @@ export type AccountTransient = {
 /** 写操作期间的乐观覆盖（服务端数据回来前先让卡片显示新值）。 */
 export type AccountOverride = Partial<Pick<AccountRow, 'enabled' | 'name' | 'max_inflight' | 'priority'>>
 
-/** 页面上的账号模态：认证（原展开区迁入）/ 查看模型 / 签到记录 / 删除确认。 */
-export const ACCOUNT_PANELS = ['auth', 'models', 'checkins', 'confirm', 'rename'] as const
+/** 页面上的账号模态：认证（原展开区迁入）/ 查看模型 / 签到记录 / 删除确认 / 重命名 / 优先级设置。 */
+export const ACCOUNT_PANELS = ['auth', 'models', 'checkins', 'confirm', 'rename', 'settings'] as const
 export type AccountPanelKey = (typeof ACCOUNT_PANELS)[number]
 
 export type AccountsUiState = {
@@ -33,7 +33,7 @@ export type AccountsUiState = {
 
 export const initialAccountsUiState: AccountsUiState = {
   addOpen: false,
-  panels: { auth: null, models: null, checkins: null, confirm: null, rename: null },
+  panels: { auth: null, models: null, checkins: null, confirm: null, rename: null, settings: null },
   busy: null,
   transients: {},
   overrides: {},

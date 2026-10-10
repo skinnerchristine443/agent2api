@@ -14,6 +14,7 @@ import (
 	"agent2api/internal/accounts"
 	"agent2api/internal/control"
 	applogs "agent2api/internal/logs"
+	"agent2api/internal/providers"
 )
 
 // t54ErrReader 是一个永远读取失败的请求体，用于驱动 io.ReadAll 的错误分支。
@@ -278,6 +279,10 @@ type t54Runtime struct {
 	checkinErr    error
 	clearModel    string
 	clearCount    int64
+
+	// 轻量成长总览替身：按账号返回计数或注入错误。
+	summaries   map[string]providers.GrowthTaskSummary
+	summaryErrs map[string]error
 }
 
 func t54NewRuntime(store *t54Store) *t54Runtime {
@@ -378,6 +383,14 @@ func (r *t54Runtime) ReplaceProxyAPIKey(_ context.Context, key string) error {
 	defer r.mu.Unlock()
 	r.replaced = append(r.replaced, key)
 	return nil
+}
+
+// GrowthTaskSummary 让替身满足 control.growthSummaryRuntime（轻量总览能力）。
+func (r *t54Runtime) GrowthTaskSummary(_ context.Context, accountID string) (providers.GrowthTaskSummary, error) {
+	if err, ok := r.summaryErrs[accountID]; ok {
+		return providers.GrowthTaskSummary{}, err
+	}
+	return r.summaries[accountID], nil
 }
 
 // t54Handler 组装一个只挂了账号服务的 Handler。

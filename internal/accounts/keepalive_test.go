@@ -17,6 +17,14 @@ func TestNormalizeKeepaliveTime(t *testing.T) {
 	}
 }
 
+// errKeepalive 的 Error() 返回其字面消息（错误串可读）。
+func TestErrKeepaliveMessage(t *testing.T) {
+	var err error = errInvalidKeepaliveTime
+	if got := err.Error(); got != "keepalive_time must use HH:mm" {
+		t.Fatalf("Error() = %q", got)
+	}
+}
+
 // 保活触发：达到本地时刻且当日未跑。旧行为 = 22:00。
 func TestKeepaliveDue(t *testing.T) {
 	at := func(h, m int) time.Time { return time.Date(2026, 10, 10, h, m, 0, 0, time.Local) }
@@ -29,6 +37,8 @@ func TestKeepaliveDue(t *testing.T) {
 		{"23:30", "22:00", "", true},
 		{"22:00", "22:00", "2026-10-10", false}, // 当日已跑
 		{"23:00", "22:00", "2026-10-09", true},  // 昨日跑的，今日再跑
+		{"23:00", "garbage", "", true},          // 非法配置回落 22:00
+		{"08:00", "garbage", "", false},         // 非法配置回落 22:00（未到点）
 	}
 	for _, tc := range cases {
 		h, _ := time.Parse("15:04", tc.now)

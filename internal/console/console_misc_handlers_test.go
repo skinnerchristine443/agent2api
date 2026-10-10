@@ -1,6 +1,7 @@
 package console
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -407,6 +408,98 @@ func TestHandleAccountGrowthObservations(t *testing.T) {
 	}
 	if len(body.Data) != 1 || body.Data[0].Target != "travel" {
 		t.Fatalf("body=%+v", body)
+	}
+}
+
+// --- 成长总览 ---------------------------------------------------------------
+
+// consoleGrowthSummaryStub 只声明轻量汇总能力，供总览判断渠道是否可列出。
+type consoleGrowthSummaryStub struct{}
+
+func (consoleGrowthSummaryStub) GrowthTaskSummary(context.Context, string) (providers.GrowthTaskSummary, error) {
+	return providers.GrowthTaskSummary{}, nil
+}
+
+func TestHandleGrowthOverview(t *testing.T) {
+	// 方法守卫。
+	rec := httptest.NewRecorder()
+	(&Handler{}).HandleGrowthOverview(rec, httptest.NewRequest(http.MethodPost, "/api/growth/overview", nil))
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("POST status=%d", rec.Code)
+	}
+
+	// 未接线必须 503，而非空表。
+	rec = httptest.NewRecorder()
+	(&Handler{}).HandleGrowthOverview(rec, httptest.NewRequest(http.MethodGet, "/api/growth/overview", nil))
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("nil control status=%d", rec.Code)
+	}
+	if code := t54ErrCode(t, rec); code != "growth_unavailable" {
+		t.Fatalf("code=%q", code)
+	}
+
+	// 正常路径：逐账号计数 + 逐账号失败隔离；无轻量汇总能力的渠道被排除。
+	store := t54NewStore()
+	store.putAccount(accounts.Account{ID: "acc-1", Name: "one", Provider: "workbuddy", ProviderRegion: "cn", Enabled: true})
+	store.putAccount(accounts.Account{ID: "acc-2", Name: "two", Provider: "workbuddy", ProviderRegion: "cn", Enabled: true})
+	store.putAccount(accounts.Account{ID: "acc-trae", Provider: "trae", ProviderRegion: "cn", Enabled: true})
+
+	rt := t54NewRuntime(store)
+	rt.summaries = map[string]providers.GrowthTaskSummary{
+		"acc-1": {Claimed: 17, Claimable: 1, Total: 18},
+	}
+	rt.summaryErrs = map[string]error{"acc-2": errors.New("upstream 503")}
+
+	registry := providers.NewRegistry()
+	registry.Register(providers.Adapter{ID: "workbuddy", GrowthSummary: consoleGrowthSummaryStub{}})
+	registry.Register(providers.Adapter{ID: "trae"})
+
+	handler := t54Handler(rt)
+	handler.Control.Accounts.Providers = registry
+
+	rec = httptest.NewRecorder()
+	handler.HandleGrowthOverview(rec, httptest.NewRequest(http.MethodGet, "/api/growth/overview", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body)
+	}
+	var body struct {
+		Rows []struct {
+			AccountID string `json:"account_id"`
+			Name      string `json:"name"`
+			Claimed   int    `json:"claimed"`
+			Claimable int    `json:"claimable"`
+			Total     int    `json:"total"`
+			Error     string `json:"error"`
+		} `json:"rows"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Rows) != 2 {
+		t.Fatalf("行数 = %d，期望 2（trae 无轻量汇总能力应被排除）: %+v", len(body.Rows), body.Rows)
+	}
+	byID := map[string]int{}
+	for i, row := range body.Rows {
+		byID[row.AccountID] = i
+	}
+	one := body.Rows[byID["acc-1"]]
+	if one.Name != "one" || one.Claimed != 17 || one.Claimable != 1 || one.Total != 18 || one.Error != "" {
+		t.Fatalf("acc-1 行 = %+v", one)
+	}
+	two := body.Rows[byID["acc-2"]]
+	if two.Error == "" || two.Claimed != 0 {
+		t.Fatalf("acc-2 应带失败原因且计数为 0: %+v", two)
+	}
+
+	// 存储失败映射到统一错误层（500 operation_failed）。
+	store.listErr = errors.New("db offline")
+	rec = httptest.NewRecorder()
+	handler.HandleGrowthOverview(rec, httptest.NewRequest(http.MethodGet, "/api/growth/overview", nil))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("store failure status=%d", rec.Code)
+	}
+	if code := t54ErrCode(t, rec); code != "operation_failed" {
+		t.Fatalf("code=%q", code)
 	}
 }
 

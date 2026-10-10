@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react'
 
-import { AccountDefaultsCard } from '@/components/system/AccountDefaultsCard'
-import { RuntimeNoticesCard } from '@/components/system/RuntimeNoticesCard'
 import { CheckinDefaults } from '@/components/system/CheckinDefaults'
 import { PageAlert } from '@/components/ui/PageAlert'
 import { SkeletonBlock } from '@/components/ui/skeletons'
 import { useSystemSettings } from '@/hooks/useSystemSettings'
 
 /**
- * 设置 · 签到页签：自动签到时间段（按渠道）+ 账号默认（渠道 × 区域）。
- * 窗口编辑器复用 CheckinDefaults；账号默认复用 AccountDefaultsCard。
+ * 设置 · 签到页签：自动签到时间段（按渠道）+「停用账号也自动签到」开关。
+ * （批次 16：运行提醒迁「通用」页、账号默认迁「渠道」页，本页只留签到本身。）
  */
 export function SettingsCheckin() {
   const [error, setError] = useState('')
@@ -28,8 +26,6 @@ export function SettingsCheckin() {
   return (
     <div className="space-y-5">
       {error ? <PageAlert title={error} /> : null}
-      <RuntimeNoticesCard settings={settings} onSaved={config.setSettings} />
-      <AccountDefaultsCard settings={settings} onSaved={config.setSettings} />
       <CheckinDefaults settings={settings} onSaved={config.setSettings} />
     </div>
   )

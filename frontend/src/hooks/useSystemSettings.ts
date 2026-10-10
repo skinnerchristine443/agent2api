@@ -3,7 +3,7 @@ import { fetchSystemSettings, updateSystemSettings, type SystemSettings } from '
 
 /**
  * 系统设置读写（原 SystemPage 的设置区逻辑原样搬移）：模型池 / 停用签到 /
- * 代理 URL / 路由策略，均为「乐观更新 + 失败回滚 + 共享 error」语义。
+ * 代理 URL / 路由策略 / 倍率优选，均为「乐观更新 + 失败回滚 + 共享 error」语义。
  */
 export function useSystemSettings(setError: (message: string) => void) {
   const [settings, setSettings] = useState<SystemSettings | null>(null)
@@ -80,6 +80,21 @@ export function useSystemSettings(setError: (message: string) => void) {
     }
   }
 
+  async function updateRatePreference(enabled: boolean) {
+    const previous = settings?.rate_preference ?? false
+    setSettings((current) => current ? { ...current, rate_preference: enabled } : current)
+    setSettingsBusy(true)
+    setError('')
+    try {
+      setSettings(await updateSystemSettings({ rate_preference: enabled }))
+    } catch (err) {
+      setSettings((current) => current ? { ...current, rate_preference: previous } : current)
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSettingsBusy(false)
+    }
+  }
+
   return {
     settings,
     setSettings,
@@ -91,5 +106,6 @@ export function useSystemSettings(setError: (message: string) => void) {
     updateCrossProviderModelPool,
     updateProxyURL,
     updateRoutingStrategy,
+    updateRatePreference,
   }
 }

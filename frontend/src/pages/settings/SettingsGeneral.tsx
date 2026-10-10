@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { SlidersHorizontal } from '@phosphor-icons/react'
+import { Gauge, SlidersHorizontal } from '@phosphor-icons/react'
+
+import { RuntimeNoticesCard } from '@/components/system/RuntimeNoticesCard'
 import { PageAlert } from '@/components/ui/PageAlert'
 import { SkeletonBlock } from '@/components/ui/skeletons'
 import { useI18n } from '@/hooks/I18nContext'
@@ -10,10 +12,10 @@ import { RoutingStrategyCard } from './RoutingStrategyCard'
 import { SwitchSettingCard } from './SwitchSettingCard'
 
 /**
- * 设置 · 运行参数页签（批次 4a 收编）：只保留会改变运行行为的参数——
- * 模型池 / 代理出口 / 停用签到 / 路由策略（签到窗口在设置 › 签到，批次 8 迁入）。
+ * 设置 · 通用页签：跨渠道的全局开关与策略——模型池 / 路由策略 / 倍率优选 /
+ * 代理出口（全局兜底）/ 运行提醒（保活 + 告警 Webhook）。渠道级参数在「渠道」页。
  */
-export function SettingsParams() {
+export function SettingsGeneral() {
   const { t } = useI18n()
   const [error, setError] = useState('')
   const config = useSystemSettings(setError)
@@ -28,14 +30,11 @@ export function SettingsParams() {
 
   if (config.loading && !config.settings) {
     return (
-      <div className="space-y-4">
-        <SkeletonBlock className="h-16 w-full rounded-2xl" />
-        <div className="grid gap-4 xl:grid-cols-2">
-          <SkeletonBlock className="h-40 w-full rounded-2xl" />
-          <SkeletonBlock className="h-40 w-full rounded-2xl" />
-          <SkeletonBlock className="h-32 w-full rounded-2xl" />
-          <SkeletonBlock className="h-32 w-full rounded-2xl" />
-        </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <SkeletonBlock className="h-32 w-full rounded-2xl" />
+        <SkeletonBlock className="h-40 w-full rounded-2xl" />
+        <SkeletonBlock className="h-32 w-full rounded-2xl" />
+        <SkeletonBlock className="h-40 w-full rounded-2xl" />
       </div>
     )
   }
@@ -59,11 +58,16 @@ export function SettingsParams() {
           statusValue={settings?.cross_provider_model_pool ? t('enabled') : t('disabled')}
         />
 
-        <ProxyCard
-          draft={proxyDraft}
-          disabled={settingsBusy || !settings}
-          onDraftChange={setProxyDraft}
-          onCommit={(value) => void config.updateProxyURL(value)}
+        <SwitchSettingCard
+          icon={<Gauge size={15} />}
+          title={t('ratePreferenceTitle')}
+          hint={t('ratePreferenceHint')}
+          isSelected={settings?.rate_preference ?? false}
+          isDisabled={settingsBusy || !settings}
+          ariaLabel={t('ratePreferenceAriaLabel')}
+          onChange={(selected) => void config.updateRatePreference(selected)}
+          statusLabel={t('crossProviderModelPoolStatus')}
+          statusValue={settings?.rate_preference ? t('enabled') : t('disabled')}
         />
 
         <RoutingStrategyCard
@@ -71,6 +75,15 @@ export function SettingsParams() {
           busy={settingsBusy}
           onStrategy={(strategy) => void config.updateRoutingStrategy(strategy)}
         />
+
+        <ProxyCard
+          draft={proxyDraft}
+          disabled={settingsBusy || !settings}
+          onDraftChange={setProxyDraft}
+          onCommit={(value) => void config.updateProxyURL(value)}
+        />
+
+        <RuntimeNoticesCard settings={settings} onSaved={config.setSettings} />
       </div>
     </div>
   )

@@ -5,39 +5,44 @@ import { Segmented } from '@/components/ui/Segmented'
 import { useI18n } from '@/hooks/I18nContext'
 import type { DictKey } from '@/i18n/messages'
 
+import { SettingsChannels } from './SettingsChannels'
 import { SettingsCheckin } from './SettingsCheckin'
+import { SettingsGeneral } from './SettingsGeneral'
 import { SettingsKeys } from './SettingsKeys'
-import { SettingsParams } from './SettingsParams'
 import { SettingsUpdate } from './SettingsUpdate'
 
-export type SettingsTab = 'params' | 'checkin' | 'keys' | 'update'
+export type SettingsTab = 'general' | 'channels' | 'checkin' | 'keys' | 'update'
 
 const TABS: ReadonlyArray<{ id: SettingsTab; labelKey: DictKey }> = [
-  { id: 'params', labelKey: 'settingsTabParams' },
+  { id: 'general', labelKey: 'settingsTabGeneral' },
+  { id: 'channels', labelKey: 'settingsTabChannels' },
   { id: 'checkin', labelKey: 'settingsTabCheckin' },
   { id: 'keys', labelKey: 'settingsTabKeys' },
   { id: 'update', labelKey: 'settingsTabUpdate' },
 ]
 
+/** 旧页签 id → 新 id（批次 16：运行参数并入「通用」）。 */
+const LEGACY_TAB: Record<string, SettingsTab> = { params: 'general' }
+
 function isSettingsTab(value: string | null): value is SettingsTab {
-  return value === 'params' || value === 'checkin' || value === 'keys' || value === 'update'
+  return value === 'general' || value === 'channels' || value === 'checkin' || value === 'keys' || value === 'update'
 }
 
 /**
- * 设置页（设计 D14；批次 8 加签到页签）：页内四页签——运行参数 / 签到 / 密钥 / 更新。
- * 页签状态入 URL（`?tab=`，默认 params 不写参）；旧路径经 NAV_REDIRECTS
- * 带 tab 直达（/system/keys → /settings?tab=keys、/system/update → /settings?tab=update）。
+ * 设置页（批次 16 重组）：页内**五页签**——通用 / 渠道 / 签到 / 密钥 / 更新。
+ * 页签状态入 URL（`?tab=`，默认 general 不写参）；旧路径经 NAV_REDIRECTS
+ * 带 tab 直达；旧 `?tab=params` 兼容映射到「通用」。
  */
 export function SettingsPage() {
   const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const raw = searchParams.get('tab')
-  const tab: SettingsTab = isSettingsTab(raw) ? raw : 'params'
+  const tab: SettingsTab = isSettingsTab(raw) ? raw : (raw && LEGACY_TAB[raw]) || 'general'
 
   const setTab = useCallback((next: SettingsTab) => {
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev)
-      if (next === 'params') params.delete('tab')
+      if (next === 'general') params.delete('tab')
       else params.set('tab', next)
       return params
     }, { replace: true })
@@ -54,7 +59,8 @@ export function SettingsPage() {
         />
       </div>
 
-      {tab === 'params' ? <SettingsParams /> : null}
+      {tab === 'general' ? <SettingsGeneral /> : null}
+      {tab === 'channels' ? <SettingsChannels /> : null}
       {tab === 'checkin' ? <SettingsCheckin /> : null}
       {tab === 'keys' ? <SettingsKeys /> : null}
       {tab === 'update' ? <SettingsUpdate /> : null}

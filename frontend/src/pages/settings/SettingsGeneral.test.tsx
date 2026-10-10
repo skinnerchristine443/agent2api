@@ -12,6 +12,7 @@ vi.mock('@/api/system', () => ({
     cross_provider_model_pool: true,
     checkin_disabled_accounts: false,
     routing_strategy: 'round-robin',
+    rate_preference: false,
     proxy_url: 'http://127.0.0.1:7890',
     session_affinity: { ttl_seconds: 600, hits: 3, misses: 1, escapes: 0 },
   })),
@@ -22,14 +23,14 @@ vi.mock('@/api/overview', () => ({
   fetchProviders: vi.fn(async () => ({ data: [] })),
 }))
 
-import { SettingsParams } from './SettingsParams'
+import { SettingsGeneral } from './SettingsGeneral'
 
 function renderPage() {
   return render(
     <I18nProvider>
       <ApiKeyProvider>
-        <MemoryRouter initialEntries={['/system']}>
-          <SettingsParams />
+        <MemoryRouter initialEntries={['/settings']}>
+          <SettingsGeneral />
         </MemoryRouter>
       </ApiKeyProvider>
     </I18nProvider>,
@@ -42,21 +43,23 @@ async function flush() {
   })
 }
 
-describe('SettingsParams（运行参数页签）', () => {
+describe('SettingsGeneral（通用页签）', () => {
   beforeEach(() => {
     localStorage.clear()
     localStorage.setItem(API_KEY_STORAGE_KEY, 'console-key')
   })
 
-  it('保留的区块仍在：模型池 / 代理 / 路由策略', async () => {
+  it('全局区块仍在：模型池 / 倍率优选 / 代理 / 路由策略 / 运行提醒', async () => {
     renderPage()
     await flush()
     expect(screen.getByText('跨 Provider 模型池')).toBeTruthy()
+    expect(screen.getByText('倍率优选')).toBeTruthy()
     expect(screen.getByText('统一代理出口')).toBeTruthy()
     expect(screen.getByText('账号调度策略')).toBeTruthy()
+    expect(screen.getByText('运行提醒')).toBeTruthy()
   })
 
-  it('更新区与密钥区不再出现在本页；停用签到已迁至「签到」页签', async () => {
+  it('更新区与密钥区不再出现在本页；签到相关已迁「签到」页签', async () => {
     renderPage()
     await flush()
     expect(screen.queryByText('检查更新')).toBeNull()

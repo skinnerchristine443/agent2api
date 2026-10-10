@@ -6,6 +6,7 @@ import { Banner } from '@/components/ui/Banner'
 import { EmptyPanel } from '@/components/ui/EmptyPanel'
 import { PageAlert } from '@/components/ui/PageAlert'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Segmented } from '@/components/ui/Segmented'
 import { SkeletonBlock } from '@/components/ui/skeletons'
 import { useGrowthQueries } from '@/hooks/useGrowthQueries'
 import { useI18n } from '@/hooks/I18nContext'
@@ -22,6 +23,9 @@ function providerOf(provider?: string) {
   return String(provider || '').toLowerCase()
 }
 
+/** 任务页内视图（方案 C）：tasks = 当前账号；overview = 跨账号总览。 */
+export type GrowthView = 'tasks' | 'overview'
+
 /**
  * 成长中心页（账号域）：账号选择 + 分区块容错面板 + 幂等领取（结果分区）+
  * 成长日志。
@@ -30,8 +34,11 @@ function providerOf(provider?: string) {
  * （`/api/providers` 的 `capabilities.growth`，由接线一致性测试钉住），
  * 不支持的渠道整个排除、不提供选中；② **动态兜底**——万一实际请求仍返回
  * 400 provider_unsupported，则以显式降级横幅呈现并在本会话置灰。
+ *
+ * 方案 C（批次 16）：页内两视图——`tasks`（当前账号，默认）与 `overview`
+ * （跨账号总览）。总览自首屏下移，避免每次进页先滚过它。
  */
-export function GrowthPage() {
+export function GrowthPage({ view = 'tasks', onView }: { view?: GrowthView; onView?: (view: GrowthView) => void } = {}) {
   const { t } = useI18n()
   const { accountId, selectAccount, setDefaultAccount } = useGrowthParams()
   const queries = useGrowthQueries(accountId)
@@ -87,22 +94,24 @@ export function GrowthPage() {
       <div data-gsap-reveal>
         <PageHeader
           className="border-b border-separator pb-6"
-          description={t('pageDescGrowth')}
+          description={t('pageDescTasks')}
           actions={(
             <>
-              <GrowthAccountPicker
-                accounts={growthAccounts}
-                value={accountId}
-                unsupportedProviders={unsupportedProviders}
-                onChange={selectAccount}
-                t={t}
-              />
+              {view === 'tasks' ? (
+                <GrowthAccountPicker
+                  accounts={growthAccounts}
+                  value={accountId}
+                  unsupportedProviders={unsupportedProviders}
+                  onChange={selectAccount}
+                  t={t}
+                />
+              ) : null}
               <Button
                 size="sm"
                 variant="secondary"
-                isDisabled={!accountId}
-                isPending={queries.statusLoading || queries.statusRefreshing}
-                onPress={queries.reloadStatus}
+                isDisabled={view === 'tasks' && !accountId}
+                isPending={view === 'overview' ? queries.overviewRefreshing : (queries.statusLoading || queries.statusRefreshing)}
+                onPress={view === 'overview' ? queries.reloadOverview : queries.reloadStatus}
               >
                 <ArrowClockwise size={15} />{t('refresh')}
               </Button>
@@ -111,92 +120,122 @@ export function GrowthPage() {
         />
       </div>
 
-      {!accounts.length && !queries.accountsLoading ? (
-        <EmptyPanel
-          className="rounded-2xl border border-dashed border-border"
-          title={t('growthNoAccounts')}
-          hint={t('growthNoAccountsHint')}
-        />
-      ) : null}
-
-      {accounts.length > 0 ? (
-        <GrowthOverview
-          rows={queries.overview}
-          loading={queries.overviewLoading}
-          error={queries.overviewError}
-          onReload={queries.reloadOverview}
-          onClaimAll={queries.claimAllClaimable}
-          claimAllPending={queries.claimAllPending}
-          claimAllResult={queries.claimAllResult}
-          t={t}
-        />
-      ) : null}
-
-      {queries.providersReady && accounts.length > 0 && growthAccounts.length === 0 ? (
-        <EmptyPanel
-          className="rounded-2xl border border-dashed border-border"
-          title={t('growthNoSupportedAccounts')}
-          hint={t('growthNoSupportedHint')}
-        />
-      ) : null}
-
-      {queries.degrade === 'unsupported' ? (
-        <Banner
-          status="warning"
-          title={t('growthUnsupported')}
-          description={t('growthUnsupportedHint')}
-          actions={<Button size="sm" variant="ghost" onPress={queries.reloadStatus}>{t('refresh')}</Button>}
-        />
-      ) : null}
-
-      {queries.degrade === 'unavailable' ? (
-        <Banner
-          status="warning"
-          title={t('growthUnavailable')}
-          description={t('growthUnavailableHint')}
-          actions={<Button size="sm" variant="ghost" onPress={queries.reloadStatus}>{t('refresh')}</Button>}
-        />
-      ) : null}
-
-      {queries.statusError ? <PageAlert title={queries.statusError} /> : null}
-
-      {failures.length ? (
-        <Banner
-          status="danger"
-          title={t('growthPartialFailures', { n: failures.length })}
-          description={failures.map((failure) => `${t(failure.block)}：${failure.message}`).join('；')}
-        />
-      ) : null}
-
-      {showSkeleton ? (
-        <div className="grid gap-4 xl:grid-cols-2">
-          <SkeletonBlock className="h-32 w-full rounded-2xl" />
-          <SkeletonBlock className="h-32 w-full rounded-2xl" />
-          <SkeletonBlock className="h-32 w-full rounded-2xl" />
-          <SkeletonBlock className="h-32 w-full rounded-2xl" />
+      {/* 页内视图切换（方案 C）：任务（当前账号）/ 总览（跨账号）。 */}
+      {onView ? (
+        <div data-gsap-reveal>
+          <Segmented
+            ariaLabel={t('navTasks')}
+            value={view}
+            onChange={onView}
+            items={[
+              { id: 'tasks', label: t('growthViewTasks') },
+              { id: 'overview', label: t('growthViewOverview') },
+            ]}
+          />
         </div>
       ) : null}
 
-      {displayStatus ? (
+      {view === 'overview' ? (
         <>
-          <GrowthPanel status={displayStatus} t={t} onTravelAction={queries.travelAction} travelPending={queries.travelPending} />
+          {!accounts.length && !queries.accountsLoading ? (
+            <EmptyPanel
+              className="rounded-2xl border border-dashed border-border"
+              title={t('growthNoAccounts')}
+              hint={t('growthNoAccountsHint')}
+            />
+          ) : null}
+          {accounts.length > 0 ? (
+            <GrowthOverview
+              rows={queries.overview}
+              loading={queries.overviewLoading}
+              error={queries.overviewError}
+              onReload={queries.reloadOverview}
+              onClaimAll={queries.claimAllClaimable}
+              claimAllPending={queries.claimAllPending}
+              claimAllResult={queries.claimAllResult}
+              t={t}
+            />
+          ) : null}
+        </>
+      ) : null}
 
-          <GrowthClaimSection
-            result={queries.claimResult}
-            pending={queries.claimPending}
-            error={queries.claimError}
-            onClaim={queries.claim}
-            t={t}
-          />
+      {view === 'tasks' ? (
+        <>
+          {!accounts.length && !queries.accountsLoading ? (
+            <EmptyPanel
+              className="rounded-2xl border border-dashed border-border"
+              title={t('growthNoAccounts')}
+              hint={t('growthNoAccountsHint')}
+            />
+          ) : null}
 
-          <GrowthHeatmap status={displayStatus} t={t} />
+          {queries.providersReady && accounts.length > 0 && growthAccounts.length === 0 ? (
+            <EmptyPanel
+              className="rounded-2xl border border-dashed border-border"
+              title={t('growthNoSupportedAccounts')}
+              hint={t('growthNoSupportedHint')}
+            />
+          ) : null}
 
-          <GrowthObservations
-            observations={queries.observations}
-            loading={queries.observationsLoading}
-            error={queries.observationsError}
-            t={t}
-          />
+          {queries.degrade === 'unsupported' ? (
+            <Banner
+              status="warning"
+              title={t('growthUnsupported')}
+              description={t('growthUnsupportedHint')}
+              actions={<Button size="sm" variant="ghost" onPress={queries.reloadStatus}>{t('refresh')}</Button>}
+            />
+          ) : null}
+
+          {queries.degrade === 'unavailable' ? (
+            <Banner
+              status="warning"
+              title={t('growthUnavailable')}
+              description={t('growthUnavailableHint')}
+              actions={<Button size="sm" variant="ghost" onPress={queries.reloadStatus}>{t('refresh')}</Button>}
+            />
+          ) : null}
+
+          {queries.statusError ? <PageAlert title={queries.statusError} /> : null}
+
+          {failures.length ? (
+            <Banner
+              status="danger"
+              title={t('growthPartialFailures', { n: failures.length })}
+              description={failures.map((failure) => `${t(failure.block)}：${failure.message}`).join('；')}
+            />
+          ) : null}
+
+          {showSkeleton ? (
+            <div className="grid gap-4 xl:grid-cols-2">
+              <SkeletonBlock className="h-32 w-full rounded-2xl" />
+              <SkeletonBlock className="h-32 w-full rounded-2xl" />
+              <SkeletonBlock className="h-32 w-full rounded-2xl" />
+              <SkeletonBlock className="h-32 w-full rounded-2xl" />
+            </div>
+          ) : null}
+
+          {displayStatus ? (
+            <>
+              <GrowthPanel status={displayStatus} t={t} onTravelAction={queries.travelAction} travelPending={queries.travelPending} />
+
+              <GrowthClaimSection
+                result={queries.claimResult}
+                pending={queries.claimPending}
+                error={queries.claimError}
+                onClaim={queries.claim}
+                t={t}
+              />
+
+              <GrowthHeatmap status={displayStatus} t={t} />
+
+              <GrowthObservations
+                observations={queries.observations}
+                loading={queries.observationsLoading}
+                error={queries.observationsError}
+                t={t}
+              />
+            </>
+          ) : null}
         </>
       ) : null}
     </div>

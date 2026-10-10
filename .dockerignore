@@ -35,22 +35,8 @@ private/
 .agent-runs/
 .workbuddy/
 
-# --- Selection notes: kept locally, never uploaded. ---
-docs/10-候选项目清单-最终版.md
-
 # --- Engineering assurance reports: contain source-trace identifiers, kept locally. ---
 deliverables/
-
-# --- Private / internal docs: kept locally, never uploaded. ---
-docs/PRIVATE_DEPLOYMENT.md
-docs/private
-docs/capture-notes.md
-docs/REQUEST.md
-docs/ARCHITECTURE.md
-docs/PLAN.md
-docs/PROVIDERS.md
-docs/PROVIDERS_TRAE.md
-docs/PROVIDERS_TRAE_SOLO.md
 
 # --- Misc local cruft ---
 web/

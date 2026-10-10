@@ -213,14 +213,22 @@ func consumeOpenAIStream(body io.Reader, handle func(json.RawMessage, *streamedC
 		}
 		if usage, ok := ParseStreamUsageLine("data: " + string(payload)); ok {
 			usage.FirstTokenAt = stats.FirstTokenAt
+			usage.FirstContentAt = stats.FirstContentAt
 			usage.SawDone = stats.SawDone
 			stats = usage
 		}
 		beforeContent := output.content.Len()
 		output.add(payload)
-		if stats.FirstTokenAt == nil && output.content.Len() > beforeContent {
+		// 本链路的 content 只累计**可见内容**（reasoning 另存），因此该增长点
+		// 既是首 token 也是首内容时刻；两者同时打点，保持 ttfb/ttft 口径一致。
+		if output.content.Len() > beforeContent {
 			now := time.Now()
-			stats.FirstTokenAt = &now
+			if stats.FirstTokenAt == nil {
+				stats.FirstTokenAt = &now
+			}
+			if stats.FirstContentAt == nil {
+				stats.FirstContentAt = &now
+			}
 		}
 		return handle(payload, &output)
 	}

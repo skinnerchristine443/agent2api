@@ -128,7 +128,9 @@ func (s *Store) ListRequestLogs(ctx context.Context, filter accounts.RequestLogF
 			       COALESCE(NULLIF(provider, ''), (SELECT provider FROM accounts WHERE accounts.id = request_logs.account_id), ''), routing,
 			       prompt_tokens, completion_tokens, cache_read_tokens, cache_write_tokens, usage_source,
 			       COALESCE(credits, (SELECT credit FROM request_usage_details WHERE request_usage_details.request_id = request_logs.id)),
-			       latency_ms, ttfb_ms, error_kind, error_code, error_message, attempt_count, message_count, empty_message_indexes, message_roles
+			       latency_ms, ttfb_ms,
+			       (SELECT ttft_ms FROM request_timings WHERE request_timings.request_id = request_logs.id),
+			       error_kind, error_code, error_message, attempt_count, message_count, empty_message_indexes, message_roles
 			FROM request_logs` + where + ` ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`
 	args = append(args, limit, offset)
 	rows, err := s.db.QueryContext(ctx, query, args...)
@@ -475,7 +477,9 @@ func (s *Store) GetRequestLog(ctx context.Context, id string) (accounts.RequestL
 			       COALESCE(NULLIF(provider, ''), (SELECT provider FROM accounts WHERE accounts.id = request_logs.account_id), ''), routing,
 			       prompt_tokens, completion_tokens, cache_read_tokens, cache_write_tokens, usage_source,
 			       COALESCE(credits, (SELECT credit FROM request_usage_details WHERE request_usage_details.request_id = request_logs.id)),
-			       latency_ms, ttfb_ms, error_kind, error_code, error_message, attempt_count, message_count, empty_message_indexes, message_roles
+			       latency_ms, ttfb_ms,
+			       (SELECT ttft_ms FROM request_timings WHERE request_timings.request_id = request_logs.id),
+			       error_kind, error_code, error_message, attempt_count, message_count, empty_message_indexes, message_roles
 			FROM request_logs WHERE id = ?`, strings.TrimSpace(id))
 	log, err := scanRequestLog(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -522,6 +526,28 @@ ON CONFLICT(request_id) DO UPDATE SET
 	)
 	if err != nil {
 		return fmt.Errorf("insert request usage detail: %w", err)
+	}
+	return nil
+}
+
+// InsertRequestTiming 落一条请求时间细分（迁移 028）。以 request_id 为键，
+// 幂等 upsert（同一请求只应有一条）。
+func (s *Store) InsertRequestTiming(ctx context.Context, timing accounts.RequestTiming) error {
+	if strings.TrimSpace(timing.RequestID) == "" {
+		return fmt.Errorf("request timing request id required")
+	}
+	if timing.CreatedAt.IsZero() {
+		timing.CreatedAt = time.Now().UTC()
+	}
+	_, err := s.db.ExecContext(ctx, `
+INSERT INTO request_timings (request_id, created_at, ttft_ms)
+VALUES (?, ?, ?)
+ON CONFLICT(request_id) DO UPDATE SET
+  ttft_ms = excluded.ttft_ms`,
+		timing.RequestID, formatTime(timing.CreatedAt), nullableInt(timing.TTFTMs),
+	)
+	if err != nil {
+		return fmt.Errorf("insert request timing: %w", err)
 	}
 	return nil
 }
@@ -655,6 +681,11 @@ func (s *Store) PurgeRequestLogs(ctx context.Context, olderThan time.Duration, m
 		maxRows = 20_000
 	}
 	cutoff := formatTime(time.Now().UTC().Add(-olderThan))
+	// 时间细分表随之清理：它只按 request_id 关联，不做级联删除，孤儿行会
+	// 无限堆积。
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM request_timings WHERE created_at < ?`, cutoff); err != nil {
+		return 0, fmt.Errorf("purge old request timings: %w", err)
+	}
 	result, err := s.db.ExecContext(ctx, `DELETE FROM request_logs WHERE created_at < ?`, cutoff)
 	if err != nil {
 		return 0, fmt.Errorf("purge old request logs: %w", err)
@@ -773,14 +804,14 @@ func scanRequestLog(row rowScanner) (accounts.RequestLog, error) {
 		prompt, completion         sql.NullInt64
 		cacheRead, cacheWrite      sql.NullInt64
 		credits                    sql.NullFloat64
-		latency, ttfb              sql.NullInt64
+		latency, ttfb, ttft        sql.NullInt64
 		emptyIndexes, messageRoles sql.NullString
 		created                    string
 	)
 	err := row.Scan(
 		&log.ID, &created, &finished, &stream, &log.Status, &log.RequestedModel, &log.MappedModel, &log.RequestedReasoning, &log.ResolvedReasoning, &accountID, &log.Provider, &log.Routing,
 		&prompt, &completion, &cacheRead, &cacheWrite, &log.UsageSource, &credits,
-		&latency, &ttfb, &log.ErrorKind, &log.ErrorCode, &log.ErrorMessage, &log.AttemptCount, &log.MessageCount, &emptyIndexes, &messageRoles,
+		&latency, &ttfb, &ttft, &log.ErrorKind, &log.ErrorCode, &log.ErrorMessage, &log.AttemptCount, &log.MessageCount, &emptyIndexes, &messageRoles,
 	)
 	if err != nil {
 		return accounts.RequestLog{}, err
@@ -802,6 +833,7 @@ func scanRequestLog(row rowScanner) (accounts.RequestLog, error) {
 	log.CacheWriteTokens = nullIntPtr(cacheWrite)
 	log.LatencyMs = nullIntPtr(latency)
 	log.TTFBMs = nullIntPtr(ttfb)
+	log.TTFTMs = nullIntPtr(ttft)
 	if credits.Valid {
 		value := credits.Float64
 		log.Credits = &value

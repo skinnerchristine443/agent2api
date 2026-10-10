@@ -26,6 +26,7 @@ type RequestPersister interface {
 	InsertRequestAttempt(ctx context.Context, attempt accounts.RequestAttempt) error
 	InsertRequestStreamDiagnostic(ctx context.Context, diagnostic accounts.RequestStreamDiagnostic) error
 	InsertRequestUsageDetail(ctx context.Context, detail accounts.RequestUsageDetail) error
+	InsertRequestTiming(ctx context.Context, timing accounts.RequestTiming) error
 	PurgeRequestLogs(ctx context.Context, olderThan time.Duration, maxRows int) (int64, error)
 }
 
@@ -160,6 +161,16 @@ func (r *RequestRecorder) UsageDetail(detail accounts.RequestUsageDetail) {
 	r.enqueue(func() {
 		if err := r.store.InsertRequestUsageDetail(context.Background(), detail); err != nil {
 			logf("insert request usage detail: %v", err)
+		}
+	})
+}
+
+// Timing 记录一次请求的时间细分（ttfb = 上游首个非空 delta，ttft = 首个可见
+// 内容）。与 UsageDetail 同样走异步队列，绝不阻塞请求路径。
+func (r *RequestRecorder) Timing(timing accounts.RequestTiming) {
+	r.enqueue(func() {
+		if err := r.store.InsertRequestTiming(context.Background(), timing); err != nil {
+			logf("insert request timing: %v", err)
 		}
 	})
 }

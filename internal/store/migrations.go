@@ -285,6 +285,18 @@ CREATE TABLE IF NOT EXISTS growth_observations (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS growth_observations_account ON growth_observations(account_id, id DESC);`},
+	// 请求时间细分（度量修正）：把「首字节（响应头到达）」与「首内容 token」
+	// 分开记录。此前 request_logs.ttfb_ms 在流式路径里已被首个非空 delta
+	// （含 reasoning_content）覆盖，无法区分「上游何时开始作答」与「何时才吐
+	// 出可见内容」——本次分析发现两者在 deep-reasoning 下差距显著。
+	// 用独立表而非新增列：追加步骤禁止 ALTER TABLE（见
+	// TestMigrationsAfterTheBaselineAreAdditive）。与 request_logs 一对零或一。
+	{filename: "028_request_timings.sql", sql: `
+CREATE TABLE IF NOT EXISTS request_timings (
+  request_id TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL,
+  ttft_ms INTEGER
+);`},
 }
 
 const schemaMigrationsDDL = `

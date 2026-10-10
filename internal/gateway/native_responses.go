@@ -53,6 +53,12 @@ func RelayNativeResponsesStream(writer io.Writer, body io.Reader, names map[stri
 			now := time.Now()
 			stats.FirstTokenAt = &now
 		}
+		// native Responses 的 FirstToken 本身就是**可见文本**增量
+		// （output_text.delta），因此同时是首内容时刻。
+		if stats.FirstContentAt == nil && event.FirstToken {
+			now := time.Now()
+			stats.FirstContentAt = &now
+		}
 		if !event.Terminal {
 			return nil
 		}

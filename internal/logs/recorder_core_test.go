@@ -18,6 +18,7 @@ type coreStore struct {
 	attempts []accounts.RequestAttempt
 	diags    []accounts.RequestStreamDiagnostic
 	usages   []accounts.RequestUsageDetail
+	timings  []accounts.RequestTiming
 	purges   int
 	err      error
 }
@@ -57,6 +58,12 @@ func (s *coreStore) InsertRequestUsageDetail(_ context.Context, entry accounts.R
 	return s.err
 }
 
+func (s *coreStore) InsertRequestTiming(_ context.Context, entry accounts.RequestTiming) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.timings = append(s.timings, entry)
+	return s.err
+}
 func (s *coreStore) PurgeRequestLogs(context.Context, time.Duration, int) (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

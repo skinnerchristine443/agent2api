@@ -25,6 +25,9 @@ func (persistOnly) InsertRequestStreamDiagnostic(context.Context, accounts.Reque
 func (persistOnly) InsertRequestUsageDetail(context.Context, accounts.RequestUsageDetail) error {
 	return nil
 }
+func (persistOnly) InsertRequestTiming(context.Context, accounts.RequestTiming) error {
+	return nil
+}
 func (persistOnly) PurgeRequestLogs(context.Context, time.Duration, int) (int64, error) {
 	return 0, nil
 }

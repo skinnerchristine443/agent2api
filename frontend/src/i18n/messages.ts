@@ -300,6 +300,7 @@ const zh = {
     logsColReasoning: '推理',
     logsColStatus: '状态',
     logsColLatency: '延迟',
+    logsColTTFB: '首字节',
     logsColTTFT: '首字',
     logsColTokens: 'Tokens',
     logsTokensIn: '输入',

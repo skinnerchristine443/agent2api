@@ -40,10 +40,14 @@ type StreamRelayStats struct {
 	Model            string
 	FinishReason     string
 	FirstTokenAt     *time.Time
-	SSEEventCount    int
-	BytesRead        int64
-	LastEvent        string
-	SawDone          bool
+	// FirstContentAt = 首个**可见内容**增量（delta.content 非空）到达。
+	// 与 FirstTokenAt 的区别：后者含 reasoning_content（思考），因此
+	// 在 deep-reasoning 下远早于用户真正看到第一个字。
+	FirstContentAt *time.Time
+	SSEEventCount  int
+	BytesRead      int64
+	LastEvent      string
+	SawDone        bool
 }
 
 type countingReader struct {
@@ -112,8 +116,15 @@ func RelayOpenAIStream(w http.ResponseWriter, body io.Reader) (stats StreamRelay
 				now := time.Now()
 				stats.FirstTokenAt = &now
 			}
+			// 首个可见内容（content 非空，不含 reasoning/tool_calls）单独打点：
+			// 这才是「用户看到第一个字」的时刻。
+			if stats.FirstContentAt == nil && SSEDeltaHasContent(line) {
+				now := time.Now()
+				stats.FirstContentAt = &now
+			}
 			if usage, ok := ParseStreamUsageLine(line); ok {
 				usage.FirstTokenAt = stats.FirstTokenAt
+				usage.FirstContentAt = stats.FirstContentAt
 				usage.SSEEventCount = stats.SSEEventCount
 				usage.BytesRead = stats.BytesRead
 				usage.LastEvent = stats.LastEvent
@@ -377,6 +388,28 @@ func SSEDeltaHasToken(line string) bool {
 	}
 	delta := parsed.Choices[0].Delta
 	return jsonHasText(delta.Content) || jsonHasText(delta.ReasoningContent) || jsonHasArray(delta.ToolCalls)
+}
+
+// SSEDeltaHasContent 报告该行是否为「首个可见内容」增量——仅看
+// delta.content（**不**含 reasoning_content 与 tool_calls）。用于把
+// 「用户看到第一个字」的时刻（ttft）从「上游开始作答」的时刻（ttfb）中
+// 分离出来。
+func SSEDeltaHasContent(line string) bool {
+	payload := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+	if payload == "" || payload == "[DONE]" {
+		return false
+	}
+	var parsed struct {
+		Choices []struct {
+			Delta struct {
+				Content json.RawMessage `json:"content"`
+			} `json:"delta"`
+		} `json:"choices"`
+	}
+	if json.Unmarshal([]byte(payload), &parsed) != nil || len(parsed.Choices) == 0 {
+		return false
+	}
+	return jsonHasText(parsed.Choices[0].Delta.Content)
 }
 
 func jsonHasText(raw json.RawMessage) bool {

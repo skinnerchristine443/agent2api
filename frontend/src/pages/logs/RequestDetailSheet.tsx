@@ -92,7 +92,8 @@ export function RequestDetailSheet({
               [t('logsColProvider'), providerLabel(selected)],
               [t('logsColAccount'), selected.account_id ? (accountNameById.get(selected.account_id) || selected.account_id) : '—'],
               [t('logsColLatency'), formatLatency(selected.latency_ms)],
-              [t('logsColTTFT'), formatLatency(selected.ttfb_ms)],
+              [t('logsColTTFB'), formatLatency(selected.ttfb_ms)],
+              [t('logsColTTFT'), selected.ttft_ms != null ? formatLatency(selected.ttft_ms) : '—'],
               [t('logsColStream'), selected.stream ? t('logsStreamYes') : t('logsStreamNo')],
               [t('logsRouting'), routingText],
             ].map(([label, value]) => (

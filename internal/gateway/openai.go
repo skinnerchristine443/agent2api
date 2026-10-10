@@ -251,6 +251,21 @@ func (h *Handler) finishRequestLog(requestID string, started time.Time, req tran
 		entry.ErrorMessage = classified.Message
 	}
 	h.Recorder.Finish(entry)
+	// 时间细分（度量修正）：ttfb 已在 entry 上（首个非空 delta，含 reasoning）；
+	// ttft 取首个**可见内容**增量。只有真正拿到内容时才落表——失败/取消
+	// 请求没有 ttft，留存 ttfb 供排障。三条流式链路（OpenAI/Anthropic/
+	// Responses）都汇聚到本函数，故在此单点记录。
+	if stats != nil && stats.FirstContentAt != nil && entry.TTFBMs != nil {
+		ttft := int(stats.FirstContentAt.Sub(started).Milliseconds())
+		if ttft < 1 {
+			ttft = 1
+		}
+		h.Recorder.Timing(accounts.RequestTiming{
+			RequestID: requestID,
+			CreatedAt: started,
+			TTFTMs:    ptrInt(ttft),
+		})
+	}
 	if stats != nil && entry.Credits != nil {
 		h.Recorder.UsageDetail(accounts.RequestUsageDetail{
 			RequestID: requestID,

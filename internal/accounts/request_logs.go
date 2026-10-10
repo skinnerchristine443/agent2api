@@ -24,26 +24,31 @@ const (
 var ErrRequestLogNotFound = errors.New("request log not found")
 
 type RequestLog struct {
-	ID                  string                   `json:"id"`
-	CreatedAt           time.Time                `json:"created_at"`
-	FinishedAt          *time.Time               `json:"finished_at,omitempty"`
-	Stream              bool                     `json:"stream"`
-	Status              string                   `json:"status"`
-	RequestedModel      string                   `json:"requested_model"`
-	MappedModel         string                   `json:"mapped_model,omitempty"`
-	RequestedReasoning  string                   `json:"requested_reasoning,omitempty"`
-	ResolvedReasoning   string                   `json:"resolved_reasoning,omitempty"`
-	AccountID           string                   `json:"account_id,omitempty"`
-	Provider            string                   `json:"provider,omitempty"`
-	Routing             string                   `json:"routing,omitempty"`
-	PromptTokens        *int                     `json:"prompt_tokens,omitempty"`
-	CompletionTokens    *int                     `json:"completion_tokens,omitempty"`
-	CacheReadTokens     *int                     `json:"cache_read_tokens,omitempty"`
-	CacheWriteTokens    *int                     `json:"cache_write_tokens,omitempty"`
-	UsageSource         string                   `json:"usage_source,omitempty"`
-	Credits             *float64                 `json:"credits,omitempty"`
-	LatencyMs           *int                     `json:"latency_ms,omitempty"`
-	TTFBMs              *int                     `json:"ttfb_ms,omitempty"`
+	ID                 string     `json:"id"`
+	CreatedAt          time.Time  `json:"created_at"`
+	FinishedAt         *time.Time `json:"finished_at,omitempty"`
+	Stream             bool       `json:"stream"`
+	Status             string     `json:"status"`
+	RequestedModel     string     `json:"requested_model"`
+	MappedModel        string     `json:"mapped_model,omitempty"`
+	RequestedReasoning string     `json:"requested_reasoning,omitempty"`
+	ResolvedReasoning  string     `json:"resolved_reasoning,omitempty"`
+	AccountID          string     `json:"account_id,omitempty"`
+	Provider           string     `json:"provider,omitempty"`
+	Routing            string     `json:"routing,omitempty"`
+	PromptTokens       *int       `json:"prompt_tokens,omitempty"`
+	CompletionTokens   *int       `json:"completion_tokens,omitempty"`
+	CacheReadTokens    *int       `json:"cache_read_tokens,omitempty"`
+	CacheWriteTokens   *int       `json:"cache_write_tokens,omitempty"`
+	UsageSource        string     `json:"usage_source,omitempty"`
+	Credits            *float64   `json:"credits,omitempty"`
+	LatencyMs          *int       `json:"latency_ms,omitempty"`
+	TTFBMs             *int       `json:"ttfb_ms,omitempty"`
+	// TTFTMs（首内容 token 延迟）来自 request_timings 表（左联读取）：
+	// 首个**非空**内容增量到达的毫秒数。ttfb_ms 记的是首个非空 delta
+	// （含 reasoning_content）——两者在 deep-reasoning 下可差数倍，
+	// 用于区分「上游开始作答」与「用户看到第一个字」。
+	TTFTMs              *int                     `json:"ttft_ms,omitempty"`
 	ErrorKind           string                   `json:"error_kind,omitempty"`
 	ErrorCode           string                   `json:"error_code,omitempty"`
 	ErrorMessage        string                   `json:"error_message,omitempty"`
@@ -62,6 +67,15 @@ type RequestUsageDetail struct {
 	Provider  string    `json:"provider,omitempty"`
 	Credit    *float64  `json:"credit,omitempty"`
 	Unit      string    `json:"unit,omitempty"`
+}
+
+// RequestTiming 记录一次请求的「首个可见内容」延迟（迁移 028）。单列 ttft_ms：
+// ttfb（首个非空 delta，含 reasoning）已存 request_logs.ttfb_ms，保持单一
+// 事实源，避免两处口径漂移。缺省 nil 表示上游未产出可见内容（失败/取消）。
+type RequestTiming struct {
+	RequestID string    `json:"request_id"`
+	CreatedAt time.Time `json:"created_at"`
+	TTFTMs    *int      `json:"ttft_ms,omitempty"`
 }
 
 type RequestStreamDiagnostic struct {

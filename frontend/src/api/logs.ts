@@ -62,6 +62,8 @@ export type RequestLog = {
   credits?: number | null
   latency_ms?: number | null
   ttfb_ms?: number | null
+  /** 首内容 token 延迟（首个可见 content 增量）；ttfb_ms 含 reasoning。 */
+  ttft_ms?: number | null
   error_kind?: string
   error_code?: string
   error_message?: string

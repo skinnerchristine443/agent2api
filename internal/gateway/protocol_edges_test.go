@@ -945,3 +945,72 @@ func TestStreamHeartbeatDelegatesHeaderAndStatus(t *testing.T) {
 		t.Fatalf("WriteHeader not delegated: %d", rec.Code)
 	}
 }
+
+// TestRelayTracksFirstContentSeparatelyFromFirstToken 钉死 ttfb/ttft 两种口径的
+// 分离：首个非空 delta（reasoning）设置 FirstTokenAt，但只有首个可见 content
+// 增量才设置 FirstContentAt。这正是 P0-1 度量修正的核心不变量——若回归成
+// 「两者同时设置」，deep-reasoning 下 ttft 会被低估为 ttfb。
+func TestRelayTracksFirstContentSeparatelyFromFirstToken(t *testing.T) {
+	body := strings.Join([]string{
+		`data: {"choices":[{"delta":{"role":"assistant"}}]}`,       // 空帧：两者都不设
+		`data: {"choices":[{"delta":{"reasoning_content":"思考"}}]}`, // 设 FirstTokenAt，不设 FirstContentAt
+		`data: {"choices":[{"delta":{"content":"你好"}}]}`,           // 设 FirstContentAt
+		`data: [DONE]`,
+	}, "\n\n") + "\n\n"
+
+	rec := httptest.NewRecorder()
+	stats, err := RelayOpenAIStream(rec, strings.NewReader(body))
+	if err != nil {
+		t.Fatalf("relay: %v", err)
+	}
+	if stats.FirstTokenAt == nil {
+		t.Fatal("reasoning delta must set FirstTokenAt")
+	}
+	if stats.FirstContentAt == nil {
+		t.Fatal("content delta must set FirstContentAt")
+	}
+	if stats.FirstContentAt.Before(*stats.FirstTokenAt) {
+		t.Fatalf("FirstContentAt (%v) must not precede FirstTokenAt (%v)", stats.FirstContentAt, stats.FirstTokenAt)
+	}
+
+	// 只有 reasoning、**没有** content 的流：FirstTokenAt 必须设置，
+	// FirstContentAt 必须保持 nil。这是判别两种口径是否被混同的关键——
+	// 若把 reasoning 也当作 content，该断言会失败。
+	reasoningOnly := strings.Join([]string{
+		`data: {"choices":[{"delta":{"role":"assistant"}}]}`,
+		`data: {"choices":[{"delta":{"reasoning_content":"只有思考"}}]}`,
+		`data: {"choices":[{"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1}}`,
+		`data: [DONE]`,
+	}, "\n\n") + "\n\n"
+	stats2, err := RelayOpenAIStream(httptest.NewRecorder(), strings.NewReader(reasoningOnly))
+	if err != nil {
+		t.Fatalf("relay (reasoning only): %v", err)
+	}
+	if stats2.FirstTokenAt == nil {
+		t.Fatal("reasoning-only stream must still set FirstTokenAt")
+	}
+	if stats2.FirstContentAt != nil {
+		t.Fatalf("reasoning-only stream must NOT set FirstContentAt, got %v", stats2.FirstContentAt)
+	}
+}
+
+// TestSSEDeltaHasContentIgnoresReasoning 直接钉死判定函数：reasoning/tool_calls
+// 不算「可见内容」，只有 delta.content 非空才算。
+func TestSSEDeltaHasContentIgnoresReasoning(t *testing.T) {
+	cases := []struct {
+		line string
+		want bool
+	}{
+		{`data: {"choices":[{"delta":{"role":"assistant"}}]}`, false},
+		{`data: {"choices":[{"delta":{"reasoning_content":"x"}}]}`, false},
+		{`data: {"choices":[{"delta":{"tool_calls":[{"id":"1"}]}}]}`, false},
+		{`data: {"choices":[{"delta":{"content":""}}]}`, false},
+		{`data: {"choices":[{"delta":{"content":"hi"}}]}`, true},
+		{`data: [DONE]`, false},
+	}
+	for _, tc := range cases {
+		if got := SSEDeltaHasContent(tc.line); got != tc.want {
+			t.Errorf("SSEDeltaHasContent(%s) = %v, want %v", tc.line, got, tc.want)
+		}
+	}
+}

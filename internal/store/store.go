@@ -433,6 +433,7 @@ var timestampColumns = []struct{ table, column string }{
 	{"request_logs", "finished_at"},
 	{"request_stream_diagnostics", "created_at"},
 	{"request_stream_diagnostics", "finished_at"},
+	{"request_timings", "created_at"},
 	{"request_usage_details", "created_at"},
 	{"schema_migrations", "applied_at"},
 }

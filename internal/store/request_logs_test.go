@@ -496,3 +496,55 @@ func TestSummarizeRequestLogsProvidersUseChannelRegion(t *testing.T) {
 		t.Fatalf("providers = %+v", stats.Providers)
 	}
 }
+
+// TestRequestTimingsRoundTrip 钉死 P0-1 度量字段的落库与回读：ttfb/ttft 经
+// request_timings 表写入后，必须在 List 与 Get 两条读取路径上都能取到；
+// 且 ttft 的缺省（未传）必须是 nil 而非 0。
+func TestRequestTimingsRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	base := accounts.RequestLog{ID: "req_timing_1", CreatedAt: now, Status: accounts.RequestStatusOK, RequestedModel: "m"}
+	if err := store.InsertRequestLog(ctx, base); err != nil {
+		t.Fatal(err)
+	}
+	ttft := 9000
+	if err := store.InsertRequestTiming(ctx, accounts.RequestTiming{
+		RequestID: "req_timing_1", CreatedAt: now, TTFTMs: &ttft,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := store.GetRequestLog(ctx, "req_timing_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.TTFTMs == nil || *got.TTFTMs != 9000 {
+		t.Fatalf("GetRequestLog ttft = %v, want 9000", got.TTFTMs)
+	}
+
+	list, err := store.ListRequestLogs(ctx, accounts.RequestLogFilter{Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 1 || list.Items[0].TTFTMs == nil || *list.Items[0].TTFTMs != 9000 {
+		t.Fatalf("ListRequestLogs ttft = %+v", list.Items)
+	}
+
+	// 未落 timing 的请求：ttft 必须为 nil（不可默认成 0）。
+	if err := store.InsertRequestLog(ctx, accounts.RequestLog{ID: "req_timing_2", CreatedAt: now, Status: accounts.RequestStatusOK, RequestedModel: "m"}); err != nil {
+		t.Fatal(err)
+	}
+	got2, err := store.GetRequestLog(ctx, "req_timing_2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got2.TTFTMs != nil {
+		t.Fatalf("absent timing must read back nil, got %v", *got2.TTFTMs)
+	}
+}

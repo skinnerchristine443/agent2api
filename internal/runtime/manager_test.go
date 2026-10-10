@@ -507,6 +507,12 @@ func (f *fakeCheckinMaintainer) DailyCheckin(context.Context, string) (string, e
 
 func (f *fakeCheckinMaintainer) Keepalive(context.Context, string) error { return nil }
 
+func (f *fakeCheckinMaintainer) ReportActivity(context.Context, string) error { return nil }
+
+func (f *fakeCheckinMaintainer) ActivityStreakDays(context.Context, string) (int, error) {
+	return 0, nil
+}
+
 func (fake *fakeCheckinMaintainer) Checkin(ctx context.Context, accountID string) (providers.CheckinResult, error) {
 	message, err := fake.DailyCheckin(ctx, accountID)
 	var already interface{ AlreadyCheckedIn() bool }

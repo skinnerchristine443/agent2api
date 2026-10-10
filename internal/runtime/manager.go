@@ -30,6 +30,11 @@ type ManagerConfig struct {
 type WorkBuddyMaintainer interface {
 	DailyCheckin(ctx context.Context, accountID string) (string, error)
 	Keepalive(ctx context.Context, accountID string) error
+	// ReportActivity 发送一条对话活跃上报（点亮 growth 连登）。默认关闭，
+	// 由 AGENT2API_ACTIVITY_REPORT 环境变量开启（见 runScheduledActivityReport）。
+	ReportActivity(ctx context.Context, accountID string) error
+	// ActivityStreakDays 回读连登天数，用于上报后的自检（发现「200 但静默丢弃」）。
+	ActivityStreakDays(ctx context.Context, accountID string) (int, error)
 }
 
 type Manager struct {

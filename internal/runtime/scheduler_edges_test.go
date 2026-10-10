@@ -32,6 +32,12 @@ func (f *edgeWorkBuddy) DailyCheckin(_ context.Context, accountID string) (strin
 	f.daily = append(f.daily, accountID)
 	return "", nil
 }
+func (f *edgeWorkBuddy) ReportActivity(_ context.Context, accountID string) error { return nil }
+
+func (f *edgeWorkBuddy) ActivityStreakDays(_ context.Context, accountID string) (int, error) {
+	return 0, nil
+}
+
 func (f *edgeWorkBuddy) Keepalive(_ context.Context, accountID string) error {
 	f.keepalived = append(f.keepalived, accountID)
 	return nil

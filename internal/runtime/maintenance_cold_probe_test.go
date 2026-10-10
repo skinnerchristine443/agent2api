@@ -65,18 +65,19 @@ func TestMaintenanceProbesColdAccountsInBatches(t *testing.T) {
 
 	now := time.Date(2026, 10, 10, 10, 0, 0, 0, time.Local)
 	lastKeepaliveDay := ""
+	lastActivityDay := ""
 
 	// 第一拍只补一小批——这正是「开机不形成上游突发」的护栏。
-	manager.runMaintenanceTick(ctx, now, &lastKeepaliveDay)
+	manager.runMaintenanceTick(ctx, now, &lastKeepaliveDay, &lastActivityDay)
 	if got := prober.n.Load(); got != coldProbeBatch {
 		t.Fatalf("第一拍探测 %d 个，期望 %d（分批上限）", got, coldProbeBatch)
 	}
 	// 第二拍把剩余的补完；第三拍不再重复打扰。
-	manager.runMaintenanceTick(ctx, now, &lastKeepaliveDay)
+	manager.runMaintenanceTick(ctx, now, &lastKeepaliveDay, &lastActivityDay)
 	if got := prober.n.Load(); got != total {
 		t.Fatalf("第二拍后累计探测 %d 个，期望 %d", got, total)
 	}
-	manager.runMaintenanceTick(ctx, now, &lastKeepaliveDay)
+	manager.runMaintenanceTick(ctx, now, &lastKeepaliveDay, &lastActivityDay)
 	if got := prober.n.Load(); got != total {
 		t.Fatalf("冷账号探完后仍重复探测：累计 %d，期望 %d", got, total)
 	}

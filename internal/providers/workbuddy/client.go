@@ -1125,6 +1125,12 @@ func (c *Client) Keepalive(ctx context.Context, accountID string) error {
 	return err
 }
 
+// ReportActivity 发送一条对话活跃上报（点亮 growth 连登）。
+// 满足 runtime.WorkBuddyMaintainer 的窄接口；具体实现见 activity_report.go。
+func (c *Client) ReportActivity(ctx context.Context, accountID string) error {
+	return c.ReportChatActivity(ctx, accountID, ActivityReportID(), "", "", "")
+}
+
 // UserResource 从 get-user-resource 汇总套餐的剩余/已用/总量。
 // packages 携带从 CycleEndTime 解析出的每套餐过期明细。
 func (c *Client) UserResource(ctx context.Context, accountID string, credential Credential) (remain, used, total int64, packages []providers.QuotaPackage, err error) {

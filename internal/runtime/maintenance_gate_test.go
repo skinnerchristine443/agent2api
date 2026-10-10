@@ -29,6 +29,10 @@ func (c *countingMaintainer) DailyCheckin(context.Context, string) (string, erro
 	return "", nil
 }
 
+func (c *countingMaintainer) ReportActivity(context.Context, string) error { return nil }
+
+func (c *countingMaintainer) ActivityStreakDays(context.Context, string) (int, error) { return 0, nil }
+
 func (c *countingMaintainer) Keepalive(context.Context, string) error {
 	c.keepalives.Add(1)
 	return nil
@@ -50,10 +54,11 @@ func TestMaintenanceTickSkipsWritesWhileUpdating(t *testing.T) {
 
 	now := time.Date(2026, 10, 7, 22, 30, 0, 0, time.Local)
 	lastDay := ""
+	lastActivityDay := ""
 
 	// 无门：签到、keepalive、告警评估各 List 一次。
 	before := store.lists.Load()
-	manager.runMaintenanceTick(context.Background(), now, &lastDay)
+	manager.runMaintenanceTick(context.Background(), now, &lastDay, &lastActivityDay)
 	if got := store.lists.Load() - before; got != 3 {
 		t.Fatalf("without gate: List calls = %d, want 3 (checkin + keepalive + alerts)", got)
 	}
@@ -66,7 +71,7 @@ func TestMaintenanceTickSkipsWritesWhileUpdating(t *testing.T) {
 	manager.SetMaintenanceGate(func() bool { return true })
 	lastDay = ""
 	before = store.lists.Load()
-	manager.runMaintenanceTick(context.Background(), now, &lastDay)
+	manager.runMaintenanceTick(context.Background(), now, &lastDay, &lastActivityDay)
 	if got := store.lists.Load() - before; got != 1 {
 		t.Fatalf("while updating: List calls = %d, want 1 (alerts only)", got)
 	}
@@ -77,7 +82,7 @@ func TestMaintenanceTickSkipsWritesWhileUpdating(t *testing.T) {
 	// 门关闭后恢复：签到与 keepalive 重新执行。
 	manager.SetMaintenanceGate(func() bool { return false })
 	before = store.lists.Load()
-	manager.runMaintenanceTick(context.Background(), now, &lastDay)
+	manager.runMaintenanceTick(context.Background(), now, &lastDay, &lastActivityDay)
 	if got := store.lists.Load() - before; got != 3 {
 		t.Fatalf("after gate closed: List calls = %d, want 3", got)
 	}

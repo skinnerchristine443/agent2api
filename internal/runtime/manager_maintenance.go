@@ -333,11 +333,12 @@ func (manager *Manager) RunMaintenanceLoop(stop <-chan struct{}) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	lastKeepaliveDay := ""
+	lastActivityDay := ""
 	for {
 		if ctx.Err() != nil {
 			return
 		}
-		manager.runMaintenanceTick(ctx, time.Now(), &lastKeepaliveDay)
+		manager.runMaintenanceTick(ctx, time.Now(), &lastKeepaliveDay, &lastActivityDay)
 		select {
 		case <-ctx.Done():
 			return
@@ -350,7 +351,7 @@ func (manager *Manager) RunMaintenanceLoop(stop <-chan struct{}) {
 // 跳过会产生写入的周期任务（签到 / keepalive）：更新失败会以备份恢复
 // 数据库，这些写入注定被覆盖回滚，跳过它们可缩小回滚丢失面；只读的
 // 资源采样与告警评估不受影响。
-func (manager *Manager) runMaintenanceTick(ctx context.Context, now time.Time, lastKeepaliveDay *string) {
+func (manager *Manager) runMaintenanceTick(ctx context.Context, now time.Time, lastKeepaliveDay *string, lastActivityDay *string) {
 	if !manager.maintenanceActive() {
 		manager.runScheduledCheckins(ctx, now)
 		// 冷账号补探：开机时全部账号都没有健康判定，只会主动探测补齐。
@@ -361,6 +362,14 @@ func (manager *Manager) runMaintenanceTick(ctx context.Context, now time.Time, l
 			manager.KeepaliveWorkBuddy(keepaliveCtx, true)
 			stopKeepalive()
 			*lastKeepaliveDay = now.Format("2006-01-02")
+		}
+		// 对话活跃上报（点亮 growth 连登）。默认关闭（AGENT2API_ACTIVITY_REPORT）；
+		// 关闭时零上游调用。每号每天 1 次，本地时刻可配（缺省 09:00）。
+		if activityReportEnabled() && activityReportDue(now, activityReportTime(), *lastActivityDay) {
+			reportCtx, stopReport := context.WithTimeout(ctx, 5*time.Minute)
+			manager.runScheduledActivityReport(reportCtx)
+			stopReport()
+			*lastActivityDay = now.Format("2006-01-02")
 		}
 	}
 	manager.sampleResources()

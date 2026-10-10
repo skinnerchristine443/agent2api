@@ -13,6 +13,7 @@ import (
 func TestProviderCheckinInheritanceAndReset(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "checkin.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,6 +64,7 @@ func TestProviderCheckinInheritanceAndReset(t *testing.T) {
 func TestProviderCheckinRejectsUnsupportedRegionsAndInvalidTimes(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "checkin.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,6 +133,7 @@ func TestProviderCheckinMigrationPreservesLegacyAccounts(t *testing.T) {
 		t.Fatal(err)
 	}
 	store, err := OpenStore(databasePath)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

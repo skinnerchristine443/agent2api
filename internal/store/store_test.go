@@ -17,6 +17,7 @@ func TestStoreCreatesAndReloadsAccount(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "agent2api.db")
 
 	store, err := OpenStore(dbPath)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,6 +39,7 @@ func TestStoreCreatesAndReloadsAccount(t *testing.T) {
 	}
 
 	reopened, err := OpenStore(dbPath)
+	defer reopened.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,6 +57,7 @@ func TestStorePersistsModelContextSettings(t *testing.T) {
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "agent2api.db")
 	store, err := OpenStore(dbPath)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,6 +69,7 @@ func TestStorePersistsModelContextSettings(t *testing.T) {
 	}
 
 	reopened, err := OpenStore(dbPath)
+	defer reopened.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,6 +96,7 @@ func TestStorePersistsAppSecrets(t *testing.T) {
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "agent2api.db")
 	store, err := OpenStore(dbPath)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,6 +108,7 @@ func TestStorePersistsAppSecrets(t *testing.T) {
 	}
 
 	reopened, err := OpenStore(dbPath)
+	defer reopened.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,6 +141,7 @@ INSERT INTO model_settings (model_id, context_length, updated_at) VALUES
 	}
 
 	reopened, err := OpenStore(dbPath)
+	defer reopened.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,6 +161,7 @@ INSERT INTO model_settings (model_id, context_length, updated_at) VALUES
 func TestProviderModelMaxModeIsIndependentOfStoredContext(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,6 +192,7 @@ func TestProviderModelMaxModeIsIndependentOfStoredContext(t *testing.T) {
 func TestProviderModelReasoningEffortPersistsWithMaxMode(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +233,18 @@ func TestStoreListsUpdatesAndDeletesAccounts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(items) != 2 || items[0].Name != "Primary" || items[0].Enabled || items[0].MaxInFlight != 7 {
+	// 顺序无关：两个账号的 created_at 在粗粒度时钟平台上可能相同，List 的排序
+	// 退回 id，与创建顺序无关。按名字取回被更新的那个再断言。
+	if len(items) != 2 {
+		t.Fatalf("accounts = %+v", items)
+	}
+	var updated accounts.Account
+	for _, item := range items {
+		if item.Name == "Primary" {
+			updated = item
+		}
+	}
+	if updated.ID != first.ID || updated.Enabled || updated.MaxInFlight != 7 {
 		t.Fatalf("accounts = %+v", items)
 	}
 	if err := store.Delete(ctx, first.ID); err != nil {
@@ -238,6 +258,7 @@ func TestStoreListsUpdatesAndDeletesAccounts(t *testing.T) {
 func TestStoreDefaultsDropSystemPromptOn(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,6 +286,7 @@ func TestStoreDefaultsDropSystemPromptOn(t *testing.T) {
 func TestStoreCreateHonorsDropSystemPromptAndInFlight(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,6 +310,7 @@ func TestStoreCreateHonorsDropSystemPromptAndInFlight(t *testing.T) {
 func TestStoreDefaultsWorkBuddyAutoCheckinOff(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -331,6 +354,7 @@ func TestStoreDefaultsWorkBuddyAutoCheckinOff(t *testing.T) {
 func TestStoreCreateUsesConfiguredWorkBuddyCheckinDefault(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -357,6 +381,7 @@ func TestStoreCreateUsesConfiguredWorkBuddyCheckinDefault(t *testing.T) {
 func TestStoreRejectsInvalidWorkBuddyCheckinTime(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -384,6 +409,7 @@ func TestCooldownsSurviveReopen(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "agent2api.db")
 
 	store, err := OpenStore(dbPath)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -403,6 +429,7 @@ func TestCooldownsSurviveReopen(t *testing.T) {
 	}
 
 	reopened, err := OpenStore(dbPath)
+	defer reopened.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -435,6 +462,7 @@ func TestSaveCooldownsReplacesStaleRows(t *testing.T) {
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "agent2api.db")
 	store, err := OpenStore(dbPath)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -466,6 +494,7 @@ func TestLoadCooldownsPrunesExpired(t *testing.T) {
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "agent2api.db")
 	store, err := OpenStore(dbPath)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,6 +520,7 @@ func TestLoadCooldownsPrunesExpired(t *testing.T) {
 func TestStorePersistsQuotaAndStatus(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

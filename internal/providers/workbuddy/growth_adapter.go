@@ -27,6 +27,19 @@ func (g growthRunner) ClaimGrowthRewards(ctx context.Context, accountID string) 
 	return mapGrowthClaimResult(result), nil
 }
 
+// GrowthTaskSummary 是轻量总览能力：只读任务清单，不碰其余四个区块。
+func (g growthRunner) GrowthTaskSummary(ctx context.Context, accountID string) (providers.GrowthTaskSummary, error) {
+	summary, err := g.client.GrowthTaskSummary(ctx, accountID)
+	if err != nil {
+		return providers.GrowthTaskSummary{}, err
+	}
+	return providers.GrowthTaskSummary{
+		Claimed:   summary.Claimed,
+		Claimable: summary.Claimable,
+		Total:     summary.Total,
+	}, nil
+}
+
 // mapGrowthStatus 镜像只读聚合。切片字段总是被分配，这样控制台对空集合序列化出
 // [] 而非 null。
 func mapGrowthStatus(in GrowthStatus) providers.GrowthStatus {

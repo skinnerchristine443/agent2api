@@ -30,6 +30,8 @@ const (
 const (
 	growthAcceptNotAccepted = "not_accepted"
 	growthAcceptCompleted   = "completed"
+	// growthAcceptClaimed 是奖励已领取的终态，用于总览计数。
+	growthAcceptClaimed = "claimed"
 )
 
 // growthTravelArrived 是领取操作唯一可作用的 travel 状态。
@@ -217,6 +219,52 @@ func (client *Client) ClaimGrowthRewards(ctx context.Context, accountID string) 
 	client.claimGrowthTravel(ctx, accountID, credential, &result)
 	client.claimGrowthTasks(ctx, accountID, credential, &result)
 	return result, nil
+}
+
+// growthTaskSummary 是轻量总览的本地计数形态；跨 provider 边界时映射为
+// providers.GrowthTaskSummary。
+type growthTaskSummary struct {
+	Claimed   int
+	Claimable int
+	Total     int
+}
+
+// GrowthTaskSummary 只读任务清单并计数（单次上游请求）。它供跨账号总览使用，
+// 不触碰其余四个成长区块。
+func (client *Client) GrowthTaskSummary(ctx context.Context, accountID string) (growthTaskSummary, error) {
+	credential, err := client.resolvedCredential(ctx, accountID)
+	if err != nil {
+		return growthTaskSummary{}, err
+	}
+	raw, err := client.growthRead(ctx, accountID, credential, pathGrowthTasks)
+	if err != nil {
+		return growthTaskSummary{}, err
+	}
+	tasks, err := parseGrowthTasks(raw)
+	if err != nil {
+		return growthTaskSummary{}, err
+	}
+	return summarizeGrowthTasks(tasks), nil
+}
+
+// summarizeGrowthTasks 把任务清单折算成「已领 / 可领 / 总数」。
+// 锁定任务不计入；可领取的判据与 claimGrowthTasks 完全一致（completed），
+// 免得总览与实际领取动作各说各话。
+func summarizeGrowthTasks(tasks []GrowthTask) growthTaskSummary {
+	var summary growthTaskSummary
+	for _, task := range tasks {
+		if task.Locked {
+			continue
+		}
+		summary.Total++
+		switch {
+		case task.Claimable():
+			summary.Claimable++
+		case task.AcceptStatus == growthAcceptClaimed:
+			summary.Claimed++
+		}
+	}
+	return summary
 }
 
 // growthRawStatus 是未解析的 travel 状态载荷。每个字段都是 json.RawMessage，因为

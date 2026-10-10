@@ -11,6 +11,7 @@ import (
 
 func TestGrowthObservationsRoundTrip(t *testing.T) {
 	store, err := OpenStore(filepath.Join(t.TempDir(), "growth-obs.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

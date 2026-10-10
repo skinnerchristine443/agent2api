@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -88,7 +89,19 @@ type Credential struct {
 	IDEVersionCode  string `json:"ide_version_code,omitempty"`
 }
 
+// DecodeCredential 解码存储 / 导入的凭据载荷，并把超界的存量设备号
+// 归一（见 normalizeDeviceID）。导入、登录、刷新、聊天与签到都经由本
+// 函数取号，因此一处归一即全链路生效。
 func DecodeCredential(payload []byte) (Credential, error) {
+	credential, err := decodeCredential(payload)
+	if err != nil {
+		return credential, err
+	}
+	credential.DeviceID = normalizeDeviceID(credential.DeviceID)
+	return credential, nil
+}
+
+func decodeCredential(payload []byte) (Credential, error) {
 	var nested struct {
 		Account struct {
 			UID          string `json:"uid"`
@@ -234,22 +247,74 @@ func randomHex(n int) string {
 	return hex.EncodeToString(raw)
 }
 
+// deviceIDRejectAt 是实测观察到的拒绝分界：x-device-id 数值 >= 此值的号
+// 一律被 UG 签到后端拒绝（9074，文案「当前参与用户太多」是误导）。
+// 同池 15 个 16 位号按数值完美切分——首位 0–3（< 4.0e15，10 个）全部正常、
+// 首位 5–9（> 5.0e15，5 个）全部 9074，分界落在 2^52。
+const deviceIDRejectAt uint64 = 1 << 52
+
+// deviceIDRejectDigits 是 deviceIDRejectAt 的十进制形态（16 位），
+// 供等长数字串做字典序比较，避免为此引入大整数依赖。
+const deviceIDRejectDigits = "4503599627370496"
+
+// deviceIDCeiling 是本仓产出设备号的目标上界。取 1e15 —— 比实测拒绝分界
+// 低一整个量级，落在**已在生产验证可用的区间**内（10 个在役号均 < 4.0e15，
+// 随机 15 位号实测亦通过），不与尚未探明的边界贴边。形态仍是 16 位零填充。
+const deviceIDCeiling uint64 = 1_000_000_000_000_000
+
 // randomNumericDeviceID 返回一个 16 位十进制 id，即 Trae 自家 IDE 客户端
-// 作为 device_id 发送的形态。裸 32 字符十六进制 id 会被 UG 签到后端
-// 拒绝（code 9074）；<=16 位的数字 id 会被接受。
+// 作为 device_id 发送的形态（客户端真号同样以 0 补满 16 位）。裸 32 字符
+// 十六进制 id 会被 UG 签到后端拒绝（code 9074）；取值必须小于
+// deviceIDRejectAt，否则同样 9074——这里直接钉在 deviceIDCeiling 以下。
 func randomNumericDeviceID() string {
 	var buf [8]byte
 	if _, err := rand.Read(buf[:]); err != nil {
-		return fmt.Sprintf("%016d", time.Now().UnixNano()%1e16)
+		return fmt.Sprintf("%016d", uint64(time.Now().UnixNano())%deviceIDCeiling)
 	}
 	n := uint64(0)
 	for _, b := range buf {
 		n = n<<8 | uint64(b)
 	}
-	return fmt.Sprintf("%016d", n%1e16)
+	return fmt.Sprintf("%016d", n%deviceIDCeiling)
+}
+
+// normalizeDeviceID 把超出可接受范围的存量设备号确定性地压回安全区。
+//
+// 只处理「纯数字且数值 >= deviceIDRejectAt」的号：空值、非数字、拒绝分界
+// 以下的号一律原样返回，因此对现存可用号零副作用。映射用取模 ⇒ 同一输入
+// 恒得同一输出，不会在请求之间抖动（设备号反复变化本身就是风控信号）。
+func normalizeDeviceID(deviceID string) string {
+	trimmed := strings.TrimSpace(deviceID)
+	if trimmed == "" || !isAllDigits(trimmed) {
+		return deviceID
+	}
+	significant := strings.TrimLeft(trimmed, "0")
+	if significant == "" || len(significant) < len(deviceIDRejectDigits) {
+		return deviceID // 位数少于分界 ⇒ 必然在范围内
+	}
+	if len(significant) == len(deviceIDRejectDigits) {
+		if significant < deviceIDRejectDigits {
+			return deviceID
+		}
+	} else {
+		// 位数多于分界：截取低位参与映射（同一输入恒定）
+		significant = significant[len(significant)-len(deviceIDRejectDigits):]
+	}
+	value, err := strconv.ParseUint(significant, 10, 64)
+	if err != nil {
+		return deviceID
+	}
+	mapped := value % deviceIDCeiling
+	if mapped == 0 {
+		mapped = 1
+	}
+	return fmt.Sprintf("%016d", mapped)
 }
 
 func EnsureDevice(credential Credential) Credential {
+	// 历史生成器会产出超界号：这里先归一，再对空值补新号，
+	// 使导入与登录落盘的号必定可用。
+	credential.DeviceID = normalizeDeviceID(credential.DeviceID)
 	if strings.TrimSpace(credential.MachineID) == "" {
 		// Trae 的 IDE 客户端发送 64 位十六进制的 machine id；匹配该形态。
 		credential.MachineID = randomHex(32)

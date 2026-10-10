@@ -14,6 +14,7 @@ import (
 // 零覆盖（唯一调用点丢弃了返回值）。这里钉死保留语义与两个对照语义。
 func TestObservePreservesQuotaExhaustedStatus(t *testing.T) {
 	s, err := OpenStore(filepath.Join(t.TempDir(), "observe.db"))
+	defer s.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

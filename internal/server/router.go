@@ -31,6 +31,7 @@ func (s *Server) routes() {
 	// 成长中心：使用显式路由（Go 1.22+ 通配符），使只读的
 	// 状态接口和幂等的领取接口与下方通用的账号
 	// action 兜底路由保持区分。
+	s.mux.HandleFunc("/api/growth/overview", s.withConsoleKey(s.consoleHandler().HandleGrowthOverview))
 	s.mux.HandleFunc("/api/accounts/{id}/growth", s.withConsoleKey(s.consoleHandler().HandleAccountGrowth))
 	s.mux.HandleFunc("/api/accounts/{id}/growth/claim", s.withConsoleKey(s.consoleHandler().HandleAccountGrowthClaim))
 	s.mux.HandleFunc("/api/accounts/{id}/growth/observations", s.withConsoleKey(s.consoleHandler().HandleAccountGrowthObservations))

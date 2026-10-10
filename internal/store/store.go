@@ -457,6 +457,23 @@ func formatTime(value time.Time) string {
 	return value.UTC().Format(timestampLayout)
 }
 
+// monotonicTimestamp 返回严格晚于 prev 的时间戳串。
+//
+// 版本列就是写入时刻（见 LoadCredentialPayloadWithVersion / SaveCredentialPayloadIfUnchanged）。
+// 在时间粒度较粗的平台上，两次写入可能落在同一时刻，从而得到相同的版本串——
+// 于是"比较并写入"会把并发的第二次写入误判为无竞态（或反之），令牌轮换的
+// 竞态抑制随之失效。这里保证版本严格单调：同刻则比 prev 前进 1ns。
+func monotonicTimestamp(now time.Time, prev string) string {
+	stamp := formatTime(now)
+	if prev == "" || stamp > prev {
+		return stamp
+	}
+	if parsed, err := time.Parse(time.RFC3339Nano, prev); err == nil {
+		return formatTime(parsed.Add(time.Nanosecond))
+	}
+	return stamp
+}
+
 func parseTime(value string) time.Time {
 	parsed, _ := time.Parse(time.RFC3339Nano, value)
 	return parsed
@@ -917,7 +934,7 @@ func (s *Store) SaveCredentialPayloadIfUnchanged(ctx context.Context, accountID,
 		return false, nil
 	}
 
-	now := formatTime(time.Now().UTC())
+	now := monotonicTimestamp(time.Now().UTC(), current)
 	if _, err := tx.ExecContext(ctx, `
 INSERT INTO account_credential_payloads (account_id, format, payload, updated_at)
 VALUES (?, ?, ?, ?)

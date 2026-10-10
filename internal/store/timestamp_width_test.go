@@ -58,6 +58,7 @@ func TestTimestampWidthNormalizationRewritesLegacyValues(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "legacy.db")
 
 	seed, err := OpenStore(path)
+	defer seed.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,6 +87,7 @@ func TestTimestampWidthNormalizationRewritesLegacyValues(t *testing.T) {
 	raw.Close()
 
 	upgraded, err := OpenStore(path)
+	defer upgraded.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,6 +120,7 @@ func TestTimestampWidthNormalizationRewritesNonCanonicalWidth(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "offset.db")
 
 	seed, err := OpenStore(path)
+	defer seed.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,6 +148,7 @@ func TestTimestampWidthNormalizationRewritesNonCanonicalWidth(t *testing.T) {
 	raw.Close()
 
 	upgraded, err := OpenStore(path)
+	defer upgraded.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,6 +172,7 @@ func TestTimestampWidthNormalizationRewritesNonCanonicalWidth(t *testing.T) {
 func TestTimestampWidthNormalizationIsIdempotent(t *testing.T) {
 	ctx := context.Background()
 	s, err := OpenStore(filepath.Join(t.TempDir(), "idempotent.db"))
+	defer s.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,6 +209,7 @@ func TestTimestampWidthNormalizationIsIdempotent(t *testing.T) {
 // 一个列在列表里却不是时间戳列，会让该步骤重写它并不理解的东西。
 func TestTimestampColumnsCoverEveryTimestampColumn(t *testing.T) {
 	s, err := OpenStore(filepath.Join(t.TempDir(), "coverage.db"))
+	defer s.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

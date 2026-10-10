@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 
 	"agent2api/internal/accounts"
 	"agent2api/internal/providers"
@@ -64,6 +65,24 @@ func (a *Accounts) Get(ctx context.Context, id string) (accounts.AccountView, er
 }
 
 func (a *Accounts) Create(ctx context.Context, input accounts.CreateAccount) (accounts.Account, error) {
+	// 账号的 7 个运行参数不再由调用方逐账号指定，而是取「渠道 × 区域」默认
+	// （在 store 里物化到账号行，运行时零改动即可读到）。
+	defaults, err := accounts.AccountDefaultsFor(ctx, a.store(), input.Provider, input.Region)
+	if err != nil {
+		return accounts.Account{}, err
+	}
+	input.MaxInFlight = defaults.MaxInFlight
+	input.ProxyURL = defaults.ProxyURL
+	dropSystemPrompt := defaults.DropSystemPrompt
+	input.DropSystemPrompt = &dropSystemPrompt
+	reserve := defaults.ReserveCredits
+	dailyToken := defaults.DailyTokenLimit
+	dailyCredit := defaults.DailyCreditLimit
+	dailyModelToken := defaults.DailyModelTokenLimit
+	input.ReserveCredits = &reserve
+	input.DailyTokenLimit = &dailyToken
+	input.DailyCreditLimit = &dailyCredit
+	input.DailyModelTokenLimit = &dailyModelToken
 	account, err := a.store().Create(ctx, input)
 	if err != nil {
 		return accounts.Account{}, err
@@ -88,6 +107,16 @@ func (a *Accounts) Update(ctx context.Context, id string, input accounts.UpdateA
 	if err != nil {
 		return accounts.Account{}, err
 	}
+	// 账号级 7 参数已迁到渠道默认，PATCH 里对应字段一律忽略，避免与渠道设置
+	// 打架。代理同样忽略：账号行上的代理是渠道默认物化来的值，不能被账号级
+	// PATCH 覆盖（改代理请改「设置 › 账号默认」）。
+	input.MaxInFlight = nil
+	input.ProxyURL = nil
+	input.DropSystemPrompt = nil
+	input.ReserveCredits = nil
+	input.DailyTokenLimit = nil
+	input.DailyCreditLimit = nil
+	input.DailyModelTokenLimit = nil
 	if err := a.store().Update(ctx, id, input); err != nil {
 		return accounts.Account{}, err
 	}
@@ -104,6 +133,71 @@ func (a *Accounts) Update(ctx context.Context, id string, input accounts.UpdateA
 		return after, err
 	}
 	return after, nil
+}
+
+// MaterializeAccountDefaults 把某「渠道 × 区域」的默认写进该渠道所有账号，
+// 使渠道设置立即对既有账号生效（运行时按账号读取，无需改运行时代码）。
+// 返回被更新的账号数。
+func (a *Accounts) MaterializeAccountDefaults(ctx context.Context, providerID, regionID string) (int, error) {
+	defaults, err := accounts.AccountDefaultsFor(ctx, a.store(), providerID, regionID)
+	if err != nil {
+		return 0, err
+	}
+	stored, err := a.store().List(ctx)
+	if err != nil {
+		return 0, err
+	}
+	updated := 0
+	for _, account := range stored {
+		if account.Provider != providerID || account.ProviderRegion != regionID {
+			continue
+		}
+		if !accounts.AccountDefaultsChanged(account, defaults) {
+			continue
+		}
+		// 直接落库并同步到活池：不能走 Update（它刻意忽略这 7 个字段，防止
+		// 账号级 PATCH 覆盖渠道默认）。
+		before := account
+		maxInFlight := defaults.MaxInFlight
+		proxyURL := defaults.ProxyURL
+		dropSystemPrompt := defaults.DropSystemPrompt
+		reserveCredits := defaults.ReserveCredits
+		dailyToken := defaults.DailyTokenLimit
+		dailyCredit := defaults.DailyCreditLimit
+		dailyModelToken := defaults.DailyModelTokenLimit
+		if err := a.store().Update(ctx, account.ID, accounts.UpdateAccount{
+			MaxInFlight: &maxInFlight, ProxyURL: &proxyURL, DropSystemPrompt: &dropSystemPrompt,
+			ReserveCredits: &reserveCredits, DailyTokenLimit: &dailyToken,
+			DailyCreditLimit: &dailyCredit, DailyModelTokenLimit: &dailyModelToken,
+		}); err != nil {
+			return updated, err
+		}
+		after, err := a.store().Get(ctx, account.ID)
+		if err != nil {
+			return updated, err
+		}
+		if err := a.runtime.SyncAccount(ctx, before, after); err != nil {
+			return updated, err
+		}
+		updated++
+	}
+	return updated, nil
+}
+
+// ReconcileAccountDefaults 把所有渠道 × 区域的默认重刷到各自账号上。
+// 由系统设置保存后调用；对现网账号是幂等的（值未变则不写库）。
+func (a *Accounts) ReconcileAccountDefaults(ctx context.Context) (int, error) {
+	total := 0
+	for _, descriptor := range providers.List() {
+		for _, region := range descriptor.Regions {
+			count, err := a.MaterializeAccountDefaults(ctx, descriptor.ID, region.ID)
+			if err != nil {
+				return total, err
+			}
+			total += count
+		}
+	}
+	return total, nil
 }
 
 func (a *Accounts) Delete(ctx context.Context, id string) error {
@@ -232,6 +326,92 @@ func (a *Accounts) ClaimGrowthRewards(ctx context.Context, id string) (providers
 // 它映射为 400 provider_unsupported，与签到保持一致。
 func growthUnsupported() error {
 	return operationError("provider_unsupported", "growth center is not available for this provider")
+}
+
+// growthSummaryRuntime 是轻量成长总览背后的可选 runtime 能力。与 GrowthRuntime
+// 分开断言：完整成长中心与轻量汇总可以各自缺位。
+type growthSummaryRuntime interface {
+	GrowthTaskSummary(ctx context.Context, accountID string) (providers.GrowthTaskSummary, error)
+}
+
+// GrowthOverviewRow 是成长中心总览的一行：某个账号的任务领取进度。
+type GrowthOverviewRow struct {
+	AccountID string `json:"account_id"`
+	Name      string `json:"name"`
+	Provider  string `json:"provider"`
+	Region    string `json:"region"`
+	// Claimed 是已领取的任务数；Claimable 是现在可领取的任务数；
+	// Total 是计入统计的任务数（不含锁定任务）。
+	Claimed   int `json:"claimed"`
+	Claimable int `json:"claimable"`
+	Total     int `json:"total"`
+	// Error 记录该账号读取失败；其余账号照常返回，不会被一行拖垮。
+	Error string `json:"error,omitempty"`
+}
+
+// growthOverviewFanout 限定总览同时最多打几个账号的上游请求。
+// 总览是给人看的列表，账号一多不能把上游打成突发。
+const growthOverviewFanout = 4
+
+// GrowthOverview 汇总各账号的任务领取进度，供成长中心的总览列表使用。
+//
+// 只覆盖「已接线轻量汇总」的渠道，并跳过已知没有任务领取的区域。
+// 逐账号失败不影响其余行：原因写进该行自己的 Error。行序与账号序一致，
+// 便于界面稳定呈现。
+func (a *Accounts) GrowthOverview(ctx context.Context) ([]GrowthOverviewRow, error) {
+	// 先确认能力，再取账号：不支持的 runtime 必须显式报错，而不是读一堆
+	// 用不上的账号。
+	runner, ok := a.runtime.(growthSummaryRuntime)
+	if !ok {
+		return nil, growthUnsupported()
+	}
+	stored, err := a.store().List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]GrowthOverviewRow, 0, len(stored))
+	for _, account := range stored {
+		if !account.Enabled || !a.growthSummarySupported(account) {
+			continue
+		}
+		rows = append(rows, GrowthOverviewRow{
+			AccountID: account.ID, Name: account.Name,
+			Provider: account.Provider, Region: account.ProviderRegion,
+		})
+	}
+	sem := make(chan struct{}, growthOverviewFanout)
+	var wait sync.WaitGroup
+	for i := range rows {
+		wait.Add(1)
+		go func(row *GrowthOverviewRow) {
+			defer wait.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			summary, readErr := runner.GrowthTaskSummary(ctx, row.AccountID)
+			if readErr != nil {
+				row.Error = readErr.Error()
+				return
+			}
+			row.Claimed, row.Claimable, row.Total = summary.Claimed, summary.Claimable, summary.Total
+		}(&rows[i])
+	}
+	wait.Wait()
+	return rows, nil
+}
+
+// growthSummarySupported 报告某账号是否纳入总览：渠道接入了轻量汇总，
+// 且不是已知没有任务领取机制的区域。
+func (a *Accounts) growthSummarySupported(account accounts.Account) bool {
+	if a.Providers == nil {
+		return false
+	}
+	adapter, ok := a.Providers.Get(account.Provider)
+	if !ok || adapter.GrowthSummary == nil {
+		return false
+	}
+	// workbuddy 国际站实测没有任务领取机制（任务只有标题，无 code/status/reward），
+	// 列进总览只会是一行空洞数据。
+	return !(account.Provider == "workbuddy" && account.ProviderRegion == "global")
 }
 
 func (a *Accounts) LoadCredentialPayload(ctx context.Context, id string) (string, []byte, error) {

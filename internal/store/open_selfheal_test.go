@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -32,6 +33,7 @@ func corruptFilesIn(t *testing.T, dir string) []string {
 func TestOpenStoreEnablesWAL(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "agent2api.db")
 	store, err := OpenStore(path)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,6 +59,7 @@ func TestStoreQuarantinesCorruptDatabaseAndRebuilds(t *testing.T) {
 	}
 
 	store, err := OpenStore(path)
+	defer store.Close()
 	if err != nil {
 		t.Fatalf("corrupt database must not brick startup: %v", err)
 	}
@@ -86,6 +89,7 @@ func TestStoreDoesNotQuarantineOnLogicalMigrationError(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "agent2api.db")
 	store, err := OpenStore(path)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,6 +147,7 @@ func TestStoreDoesNotQuarantineOnUnreadableFile(t *testing.T) {
 	path := filepath.Join(dir, "agent2api.db")
 
 	store, err := OpenStore(path)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,6 +156,11 @@ func TestStoreDoesNotQuarantineOnUnreadableFile(t *testing.T) {
 	}
 	if err := store.Close(); err != nil {
 		t.Fatal(err)
+	}
+	if runtime.GOOS == "windows" {
+		// Windows 的 chmod 无法撤销读权限（0o000 仍是可读），"不可读文件"的
+		// 现场无法构造；该断言只在类 Unix 上有意义。
+		t.Skip("chmod 0o000 does not make a file unreadable on windows")
 	}
 	if err := os.Chmod(path, 0o000); err != nil {
 		t.Fatal(err)
@@ -223,6 +233,7 @@ func TestStoreDoesNotQuarantineWhenDatabaseLocked(t *testing.T) {
 	}()
 
 	store, err := OpenStore(path)
+	defer store.Close()
 	if err != nil {
 		t.Fatalf("a transient lock must not fail the open: %v", err)
 	}

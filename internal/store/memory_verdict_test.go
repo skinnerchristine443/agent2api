@@ -19,6 +19,7 @@ func TestMemoryVerdictRequestLogsBounded(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "agent2api.db")
 	store, err := OpenStore(path)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

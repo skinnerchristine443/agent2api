@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 
+import { AccountDefaultsCard } from '@/components/system/AccountDefaultsCard'
 import { CheckinDefaults } from '@/components/system/CheckinDefaults'
 import { PageAlert } from '@/components/ui/PageAlert'
 import { SkeletonBlock } from '@/components/ui/skeletons'
 import { useSystemSettings } from '@/hooks/useSystemSettings'
 
 /**
- * 设置 · 签到页签（批次 8：自动签到时间段选择自福利 › 签到页迁入）。
- * 窗口编辑器复用 CheckinDefaults（按渠道能力列出 provider，逐渠道保存）。
- * 取数走 useSystemSettings（pages 层不直接 import `@/api`，见前端约定守卫）。
+ * 设置 · 签到页签：自动签到时间段（按渠道）+ 账号默认（渠道 × 区域）。
+ * 窗口编辑器复用 CheckinDefaults；账号默认复用 AccountDefaultsCard。
  */
 export function SettingsCheckin() {
   const [error, setError] = useState('')
@@ -27,6 +27,7 @@ export function SettingsCheckin() {
   return (
     <div className="space-y-5">
       {error ? <PageAlert title={error} /> : null}
+      <AccountDefaultsCard settings={settings} onSaved={config.setSettings} />
       <CheckinDefaults settings={settings} onSaved={config.setSettings} />
     </div>
   )

@@ -115,3 +115,25 @@ type AccountGrowthRunner interface {
 	GrowthStatus(ctx context.Context, accountID string) (GrowthStatus, error)
 	ClaimGrowthRewards(ctx context.Context, accountID string) (GrowthClaimResult, error)
 }
+
+// GrowthTaskSummary 是跨账号总览所需的轻量计数：只统计任务清单，
+// 不做 travel / streak / energy / heatmap 的逐块聚合。
+//
+// 完整的 GrowthStatus 每账号要打 5 个上游请求，账号一多的列表场景就会
+// 形成上游突发；总览只需要「已领 / 可领 / 总数」三个数字，因此单列一个
+// 只打任务清单的轻量能力。
+type GrowthTaskSummary struct {
+	// Claimed 是奖励已领取的任务数。
+	Claimed int `json:"claimed"`
+	// Claimable 是当前可以领取的任务数（判据与领取动作一致）。
+	Claimable int `json:"claimable"`
+	// Total 是计入统计的任务数（不含锁定任务）。
+	Total int `json:"total"`
+}
+
+// AccountGrowthSummarizer 是可选的轻量成长汇总能力。只提供完整成长中心
+// 但未提供轻量汇总的适配器，让 Adapter.GrowthSummary 保持为 nil，总览会
+// 跳过这些渠道的账号。
+type AccountGrowthSummarizer interface {
+	GrowthTaskSummary(ctx context.Context, accountID string) (GrowthTaskSummary, error)
+}

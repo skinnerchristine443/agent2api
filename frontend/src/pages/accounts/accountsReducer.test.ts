@@ -12,18 +12,18 @@ describe('accountsReducer', () => {
     const both = accountsReducer(opened, { type: 'panel', panel: 'confirm', id: 'a2' })
     expect(both.panels.models).toBe('a1')
     expect(both.panels.confirm).toBe('a2')
-    expect(both.panels.edit).toBeNull()
+    expect(both.panels.auth).toBeNull()
 
     const closed = accountsReducer(both, { type: 'panel', panel: 'models', id: null })
     expect(closed.panels.models).toBeNull()
     expect(closed.panels.confirm).toBe('a2')
   })
 
-  it('addOpen / authPanel：添加向导与卡片登录面板各自可控', () => {
+  it('addOpen / auth 面板：添加向导与认证模态各自可控', () => {
     const added = accountsReducer(initialAccountsUiState, { type: 'addOpen', open: true })
     expect(added.addOpen).toBe(true)
-    expect(accountsReducer(added, { type: 'authPanel', id: 'a1' }).authPanelId).toBe('a1')
-    expect(accountsReducer(added, { type: 'authPanel', id: null }).authPanelId).toBeNull()
+    expect(accountsReducer(added, { type: 'panel', panel: 'auth', id: 'a1' }).panels.auth).toBe('a1')
+    expect(accountsReducer(added, { type: 'panel', panel: 'auth', id: null }).panels.auth).toBeNull()
   })
 
   it('busy：设置与清除（同刻只保留一个在途标记）', () => {
@@ -63,17 +63,15 @@ describe('accountsReducer', () => {
     state = accountsReducer(state, { type: 'transient', id: 'a1', patch: { note: 'x' } })
     state = accountsReducer(state, { type: 'override', id: 'a1', patch: { name: 'x' } })
     state = accountsReducer(state, { type: 'busy', busy: { id: 'a1', kind: 'delete' } })
-    state = accountsReducer(state, { type: 'panel', panel: 'edit', id: 'a1' })
+    state = accountsReducer(state, { type: 'panel', panel: 'auth', id: 'a1' })
     state = accountsReducer(state, { type: 'panel', panel: 'confirm', id: 'a2' })
-    state = accountsReducer(state, { type: 'authPanel', id: 'a1' })
     state = accountsReducer(state, { type: 'transient', id: 'a2', patch: { note: '其他账号' } })
 
     const next = accountsReducer(state, { type: 'forget', id: 'a1' })
     expect(next.transients.a1).toBeUndefined()
     expect(next.overrides.a1).toBeUndefined()
     expect(next.busy).toBeNull()
-    expect(next.panels.edit).toBeNull()
-    expect(next.authPanelId).toBeNull()
+    expect(next.panels.auth).toBeNull()
     // 其他账号与未指向它的面板不受影响
     expect(next.panels.confirm).toBe('a2')
     expect(next.transients.a2).toEqual({ note: '其他账号' })

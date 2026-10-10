@@ -157,14 +157,7 @@ func NewTransport(raw string) (*http.Transport, error) {
 	} else {
 		transport = transport.Clone()
 	}
-	transport.MaxIdleConns = maxIdleConns
-	transport.MaxIdleConnsPerHost = maxIdleConnsPerHost
-	transport.IdleConnTimeout = idleConnTimeout
-	// 仅当尚无其他限制时才限制响应头等待：默认是「无限制」，
-	// 一个停滞的上游一直握着响应头会占住一个 worker 槽位。
-	if transport.ResponseHeaderTimeout == 0 {
-		transport.ResponseHeaderTimeout = responseHeaderTimeout
-	}
+	tunePoolSettings(transport)
 	switch setting.Mode {
 	case ModeDirect:
 		transport.Proxy = nil
@@ -199,6 +192,46 @@ func NewTransport(raw string) (*http.Transport, error) {
 	return transport, nil
 }
 
+// tunePoolSettings 把连接池上限钉到网关规模。Go 默认的
+// MaxIdleConnsPerHost = 2 是按浏览器规模设的：把同一上游主机扇出到多条并发流时，
+// 连接会被反复拆除并重新拨号（并重跑 TLS 握手），正是「首个 token 迟迟不来」的
+// 常见成因之一。
+func tunePoolSettings(transport *http.Transport) {
+	transport.MaxIdleConns = maxIdleConns
+	transport.MaxIdleConnsPerHost = maxIdleConnsPerHost
+	transport.IdleConnTimeout = idleConnTimeout
+	// 仅当尚无其他限制时才限制响应头等待：默认是「无限制」，
+	// 一个停滞的上游一直握着响应头会占住一个 worker 槽位。
+	if transport.ResponseHeaderTimeout == 0 {
+		transport.ResponseHeaderTimeout = responseHeaderTimeout
+	}
+}
+
+// inheritTransport 是「未配置代理」时使用的出站传输：与显式代理路径同样钉好
+// 连接池上限，但保留 http.DefaultTransport 的 Proxy（http.ProxyFromEnvironment），
+// 因此仍尊重 HTTP_PROXY/NO_PROXY 等环境变量。
+//
+// 没有它时，空设置会让每个请求的客户端退回 http.DefaultTransport——
+// MaxIdleConnsPerHost 只有 2，并发下连接反复重建。惰性构建一次并共享。
+var (
+	inheritTransportOnce sync.Once
+	inheritTransport     *http.Transport
+)
+
+func SharedInheritTransport() *http.Transport {
+	inheritTransportOnce.Do(func() {
+		transport, ok := http.DefaultTransport.(*http.Transport)
+		if !ok || transport == nil {
+			transport = &http.Transport{}
+		} else {
+			transport = transport.Clone()
+		}
+		tunePoolSettings(transport)
+		inheritTransport = transport
+	})
+	return inheritTransport
+}
+
 // maxCachedTransports 限定缓存规模。没有上限时，每个不同的代理 URL
 // （全局或按账号）都会让一个 http.Transport 永久存活，即便运维已不再使用该代理，
 // 仍会占住其空闲连接与代理凭据。32 足以覆盖现实的账号数量，
@@ -223,7 +256,8 @@ type TransportCache struct {
 }
 
 // Get 返回 raw 对应的缓存 transport，惰性构建。raw 为空时返回 (nil, nil)，
-// 让调用方沿用其现有/默认 transport。
+// 让调用方沿用其现有/默认 transport（客户端默认已是 SharedInheritTransport，
+// 见各 provider 的 NewClient）。
 func (c *TransportCache) Get(raw string) (*http.Transport, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {

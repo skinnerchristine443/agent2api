@@ -18,14 +18,12 @@ export type AccountTransient = {
 /** 写操作期间的乐观覆盖（服务端数据回来前先让卡片显示新值）。 */
 export type AccountOverride = Partial<Pick<AccountRow, 'enabled' | 'name' | 'max_inflight' | 'priority'>>
 
-/** 页面上的 4 个账号模态（添加向导由 addOpen 单独承载）。 */
-export const ACCOUNT_PANELS = ['edit', 'models', 'checkins', 'confirm'] as const
+/** 页面上的账号模态：认证（原展开区迁入）/ 查看模型 / 签到记录 / 删除确认。 */
+export const ACCOUNT_PANELS = ['auth', 'models', 'checkins', 'confirm'] as const
 export type AccountPanelKey = (typeof ACCOUNT_PANELS)[number]
 
 export type AccountsUiState = {
   addOpen: boolean
-  /** 卡片内联登录面板（同刻仅一个账号展开）。 */
-  authPanelId: string | null
   /** 打开中的模态 → 目标账号 id。 */
   panels: Record<AccountPanelKey, string | null>
   busy: AccountBusy | null
@@ -35,8 +33,7 @@ export type AccountsUiState = {
 
 export const initialAccountsUiState: AccountsUiState = {
   addOpen: false,
-  authPanelId: null,
-  panels: { edit: null, models: null, checkins: null, confirm: null },
+  panels: { auth: null, models: null, checkins: null, confirm: null },
   busy: null,
   transients: {},
   overrides: {},
@@ -44,7 +41,6 @@ export const initialAccountsUiState: AccountsUiState = {
 
 export type AccountsUiAction =
   | { type: 'addOpen'; open: boolean }
-  | { type: 'authPanel'; id: string | null }
   | { type: 'panel'; panel: AccountPanelKey; id: string | null }
   | { type: 'busy'; busy: AccountBusy | null }
   | { type: 'transient'; id: string; patch: AccountTransient }
@@ -89,7 +85,6 @@ function forgetAccount(state: AccountsUiState, id: string): AccountsUiState {
     next.overrides = overrides
   }
   if (state.busy?.id === id) next.busy = null
-  if (state.authPanelId === id) next.authPanelId = null
   const panels = { ...state.panels }
   let panelsChanged = false
   for (const key of ACCOUNT_PANELS) {
@@ -110,8 +105,6 @@ export function accountsReducer(state: AccountsUiState, action: AccountsUiAction
   switch (action.type) {
     case 'addOpen':
       return { ...state, addOpen: action.open }
-    case 'authPanel':
-      return { ...state, authPanelId: action.id }
     case 'panel':
       return { ...state, panels: { ...state.panels, [action.panel]: action.id } }
     case 'busy':

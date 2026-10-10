@@ -11,6 +11,7 @@ import (
 func TestRequestLogsInsertListGetAndPurge(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,6 +164,7 @@ func TestRequestLogsInsertListGetAndPurge(t *testing.T) {
 func TestUsageDetailBackfillUsesProviderThenAccountFallback(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,6 +231,7 @@ func TestUsageDetailBackfillUsesProviderThenAccountFallback(t *testing.T) {
 func TestRequestLogsPaginationAndTimeFilter(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,6 +294,7 @@ func TestRequestLogsPaginationAndTimeFilter(t *testing.T) {
 func TestRequestLogsCapPurgeKeepsNewest(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,6 +324,7 @@ func TestRequestLogsCapPurgeKeepsNewest(t *testing.T) {
 func TestSummarizeRequestLogs(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -420,6 +425,7 @@ func TestSummarizeRequestLogs(t *testing.T) {
 func TestRequestLogPersistsRouting(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -447,6 +453,7 @@ func TestRequestLogPersistsRouting(t *testing.T) {
 func TestSummarizeRequestLogsProvidersUseChannelRegion(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,11 +3,13 @@ import { useEffect, useRef, useState } from 'react'
 import {
   claimGrowthRewards,
   fetchGrowthObservations,
+  fetchGrowthOverview,
   fetchGrowthStatus,
   isGrowthUnavailable,
   isProviderUnsupported,
   type GrowthClaimResult,
   type GrowthObservation,
+  type GrowthOverviewRow,
   type GrowthStatus,
 } from '@/api/growth'
 import { fetchAccounts, fetchProviders, type ProviderDescriptor } from '@/api/overview'
@@ -48,6 +50,15 @@ export type GrowthQueries = {
   degrade: GrowthDegrade
   claim: () => void
   reloadStatus: () => void
+  /** 跨账号任务领取总览（每个账号只读一次任务清单）。 */
+  overview: GrowthOverviewRow[]
+  overviewLoading: boolean
+  overviewError: string | null
+  reloadOverview: () => void
+  /** 一键领取总览里所有「可领 > 0」的账号，返回逐账号结果。 */
+  claimAllClaimable: () => void
+  claimAllPending: boolean
+  claimAllResult: { success: number; already: number } | null
 }
 
 /**
@@ -91,6 +102,36 @@ export function useGrowthQueries(accountId: string): GrowthQueries {
     { enabled: Boolean(accountId) },
   )
 
+  // 总览独立于当前选中账号：进入页面即可看全部账号进度。
+  const overviewQuery = useApiQuery((signal) => fetchGrowthOverview(signal), 'growth:overview')
+  const overviewRefresh = overviewQuery.refresh
+  const statusRefreshForAll = statusQuery.refresh
+  const [claimAllResult, setClaimAllResult] = useState<{ success: number; already: number } | null>(null)
+
+  // 一键领取：只挑「可领 > 0」的账号，逐个幂等领取（顺序执行，避免把上游
+  // 打成突发）。已领过的账号不计入成功数。完成后刷新总览与当前账号。
+  const claimAllAction = useAsyncAction(async () => {
+    const targets = (overviewQuery.data?.rows ?? []).filter((row) => !row.error && row.claimable > 0)
+    let success = 0
+    let already = 0
+    for (const row of targets) {
+      try {
+        const result = await claimGrowthRewards(row.account_id)
+        for (const outcome of result.outcomes ?? []) {
+          if (outcome.status === 'success') success++
+          else if (outcome.status === 'already_claimed') already++
+        }
+      } catch {
+        // 单个账号失败不中断整批；总览刷新后会如实反映它仍可领。
+      }
+    }
+    await overviewRefresh()
+    if (accountId) await statusRefreshForAll()
+    const summary = { success, already }
+    setClaimAllResult(summary)
+    return summary
+  })
+
   const statusRefresh = statusQuery.refresh
   const observationsRefresh = observationsQuery.refresh
   const claimAction = useAsyncAction(async () => {
@@ -127,5 +168,12 @@ export function useGrowthQueries(accountId: string): GrowthQueries {
     degrade,
     claim: () => void claimAction.run(),
     reloadStatus: () => void statusQuery.refresh(),
+    overview: overviewQuery.data?.rows ?? [],
+    overviewLoading: overviewQuery.loading,
+    overviewError: overviewQuery.error,
+    reloadOverview: () => void overviewQuery.refresh(),
+    claimAllClaimable: () => void claimAllAction.run(),
+    claimAllPending: claimAllAction.pending,
+    claimAllResult,
   }
 }

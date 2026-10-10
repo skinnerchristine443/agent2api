@@ -56,18 +56,7 @@ export function AddAccountLoginStep({ wizard, t }: Props) {
       <AddAccountSettings
         name={wizard.name}
         onNameChange={wizard.setName}
-        maxInFlight={wizard.maxInFlight}
-        onMaxInFlightChange={wizard.setMaxInFlight}
-        priority={wizard.priority}
-        onPriorityChange={wizard.setPriority}
-        proxyUrl={wizard.proxyUrl}
-        onProxyUrlChange={wizard.setProxyUrl}
-        dropSystemPrompt={wizard.dropSystemPrompt}
-        onDropSystemPromptChange={wizard.setDropSystemPrompt}
-        showDropSystem={wizard.showDropSystem}
         locked={wizard.settingsLocked}
-        advancedOpen={wizard.advancedOpen}
-        onToggleAdvanced={() => wizard.setAdvancedOpen(!wizard.advancedOpen)}
         t={t}
       />
 

@@ -13,6 +13,7 @@ import { useI18n } from '@/hooks/I18nContext'
 import { GrowthAccountPicker } from './GrowthAccountPicker'
 import { GrowthClaimSection } from './GrowthClaimSection'
 import { GrowthObservations } from './GrowthObservations'
+import { GrowthOverview } from './GrowthOverview'
 import { GrowthHeatmap, GrowthPanel } from './GrowthPanel'
 import { blockErrors } from './growthModel'
 import { useGrowthParams } from './useGrowthParams'
@@ -115,6 +116,19 @@ export function GrowthPage() {
           className="rounded-2xl border border-dashed border-border"
           title={t('growthNoAccounts')}
           hint={t('growthNoAccountsHint')}
+        />
+      ) : null}
+
+      {accounts.length > 0 ? (
+        <GrowthOverview
+          rows={queries.overview}
+          loading={queries.overviewLoading}
+          error={queries.overviewError}
+          onReload={queries.reloadOverview}
+          onClaimAll={queries.claimAllClaimable}
+          claimAllPending={queries.claimAllPending}
+          claimAllResult={queries.claimAllResult}
+          t={t}
         />
       ) : null}
 

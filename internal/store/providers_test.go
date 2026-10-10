@@ -10,6 +10,7 @@ import (
 func TestStorePersistsProviderAndRegion(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,6 +41,7 @@ func TestStorePersistsProviderAndRegion(t *testing.T) {
 func TestStoreRejectsUnknownProviderAndRegion(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

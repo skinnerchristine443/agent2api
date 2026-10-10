@@ -142,7 +142,10 @@ func replaceRunningBinary(currentPath, nextPath string) error {
 		}
 	}
 	if err := os.Rename(nextPath, currentPath); err != nil {
-		if runtime.GOOS == "windows" {
+		// Windows 上运行中的 .exe 无法被覆盖（共享冲突），留给重启脚本用
+		// .new 完成替换——但这只适用于"目标被占用"，绝不能吞掉源文件缺失
+		// 这类真错误（那会谎报替换成功）。
+		if runtime.GOOS == "windows" && !os.IsNotExist(err) {
 			return nil
 		}
 		if restoreErr := os.Rename(backupPath, currentPath); restoreErr != nil && !os.IsNotExist(restoreErr) {

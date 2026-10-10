@@ -16,6 +16,7 @@ import (
 // to 那一秒内的任意小数部分都包含，下一秒排除。
 func TestTimeRangeFilterUsesIndexAndKeepsSecondPrecision(t *testing.T) {
 	s, err := OpenStore(filepath.Join(t.TempDir(), "timefilter.db"))
+	defer s.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

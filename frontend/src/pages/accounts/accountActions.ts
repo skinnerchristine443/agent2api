@@ -1,7 +1,7 @@
 import type { Dispatch } from 'react'
 
 import type { AccountBusyKind } from '@/components/accounts/AccountRow'
-import type { AccountPool, AccountSettingsInput } from '@/components/accounts/useAccountPool'
+import type { AccountPool } from '@/components/accounts/useAccountPool'
 import type { DeviceLoginPoll } from '@/components/accounts/useDeviceLoginPoll'
 import type { Translate } from '@/i18n/messages'
 import { copyText } from '@/lib/clipboard'
@@ -18,6 +18,7 @@ export type RunAction = (
 
 export type AccountHandlersInput = {
   dispatch: Dispatch<AccountsUiAction>
+  /** 当前打开的认证模态账号（用于「再次点击 = 关闭」与取消轮询）。 */
   authPanelId: string | null
   transients: Record<string, AccountTransient>
   pool: AccountPool
@@ -40,12 +41,12 @@ export type AccountHandlers = {
   onCheckin: (id: string) => void
   onClearCooldowns: (id: string) => void
   onDelete: (id: string) => void
-  onEdit: (id: string) => void
+  /** 优先级：列表列内联修改（账号级；不迁设置）。 */
+  onPriorityChange: (id: string, priority: number) => void
   onViewModels: (id: string) => void
   onViewCheckins: (id: string) => void
+  /** 打开认证模态（认证方式列）。 */
   onToggleAuthPanel: (id: string) => void
-  /** 抛错（EditAccountModal 自行展示错误），成功与否由 promise 决定。 */
-  onSaveSettings: (id: string, input: AccountSettingsInput) => Promise<void>
 }
 
 /** useAsyncAction 的执行体：统一在途标记与失败文案（迁移前 run() 模式）。 */
@@ -82,7 +83,6 @@ export function createAccountHandlers({
   const patch = (id: string, value: AccountTransient) => dispatch({ type: 'transient', id, patch: value })
 
   async function onDeviceLogin(id: string) {
-    dispatch({ type: 'authPanel', id })
     await run(id, 'device', async () => {
       patch(id, { note: t('wizardStartingSession'), authUrl: '' })
       const output = await pool.startDeviceLogin(id)
@@ -106,7 +106,7 @@ export function createAccountHandlers({
       await pool.submitCallback(id, pasted)
     })
     if (ok) {
-      dispatch({ type: 'authPanel', id: null })
+      dispatch({ type: 'panel', panel: 'auth', id: null })
       patch(id, { callback: '', note: '' })
     }
   }
@@ -155,26 +155,18 @@ export function createAccountHandlers({
   }
 
   function onToggleAuthPanel(id: string) {
-    const closing = authPanelId === id
-    // 关闭登录面板 = 取消该账号的等待轮询（迁移前排询会继续到上限）。
-    if (closing && deviceLogin.accountId === id) deviceLogin.cancel()
-    dispatch({ type: 'authPanel', id: closing ? null : id })
+    // 打开认证模态。关闭（切换 / 关闭时）取消该账号的等待轮询。
+    const opening = authPanelId !== id
+    if (!opening && deviceLogin.accountId === id) deviceLogin.cancel()
+    dispatch({ type: 'panel', panel: 'auth', id: opening ? id : null })
   }
 
-  async function onSaveSettings(id: string, input: AccountSettingsInput) {
-    if (!id) throw new Error(t('accountNameRequired'))
-    dispatch({
-      type: 'override',
-      id,
-      patch: { name: input.name, max_inflight: input.max_inflight, priority: input.priority },
-    })
-    dispatch({ type: 'busy', busy: { id, kind: 'settings' } })
-    try {
-      await pool.saveSettings(id, input)
-    } finally {
-      dispatch({ type: 'busy', busy: null })
+  function onPriorityChange(id: string, priority: number) {
+    const next = Math.min(100, Math.max(1, Math.trunc(priority)))
+    dispatch({ type: 'override', id, patch: { priority: next } })
+    void run(id, 'settings', () => pool.saveSettings(id, { priority: next })).finally(() => {
       dispatch({ type: 'clearOverride', id })
-    }
+    })
   }
 
   return {
@@ -194,10 +186,9 @@ export function createAccountHandlers({
     onCheckin: (id) => void run(id, 'checkin', () => pool.checkin(id)),
     onClearCooldowns: (id) => void run(id, 'cooldowns', () => pool.clearCooldowns(id)),
     onDelete,
-    onEdit: (id) => dispatch({ type: 'panel', panel: 'edit', id }),
+    onPriorityChange,
     onViewModels: (id) => dispatch({ type: 'panel', panel: 'models', id }),
     onViewCheckins: (id) => dispatch({ type: 'panel', panel: 'checkins', id }),
     onToggleAuthPanel,
-    onSaveSettings,
   }
 }

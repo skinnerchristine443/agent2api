@@ -73,6 +73,10 @@ func NewClient(store Store) *Client {
 		store: store,
 		http: &http.Client{
 			Timeout: 120 * time.Second,
+			// 默认 transport 用连接池已调好的共享实例：Go 默认的
+			// MaxIdleConnsPerHost=2 会让并发流反复重建连接（首 token 变慢）。
+			// 未配置代理时 httpClient() 返回 nil transport，客户端便沿用此默认值。
+			Transport: proxyutil.SharedInheritTransport(),
 			// 当路径是控制台页面时，Catalog 与插件 API 会 302 到 OIDC HTML。
 			// 跟随该重定向会把 302 变成一份登录文档，从而掩盖真实状态。
 			CheckRedirect: func(*http.Request, []*http.Request) error {
@@ -1372,15 +1376,16 @@ func aggregateUserResource(packages []resourcePackage, totalDosage int64) (remai
 // Adapter 返回用于注册的 provider 能力包。
 func (c *Client) Adapter() providers.Adapter {
 	return providers.Adapter{
-		ID:         "workbuddy",
-		Credential: credentialCodec{},
-		Login:      c,
-		Chat:       c,
-		Models:     c,
-		Classifier: classifier{},
-		Prober:     c,
-		Checkin:    c,
-		Growth:     growthRunner{client: c},
+		ID:            "workbuddy",
+		Credential:    credentialCodec{},
+		Login:         c,
+		Chat:          c,
+		Models:        c,
+		Classifier:    classifier{},
+		Prober:        c,
+		Checkin:       c,
+		Growth:        growthRunner{client: c},
+		GrowthSummary: growthRunner{client: c},
 	}
 }
 

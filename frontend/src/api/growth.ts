@@ -79,6 +79,25 @@ export type GrowthObservation = {
   energy?: number
 }
 
+/**
+ * 总览行：某个账号的任务领取进度（对齐 Go 侧 `control.GrowthOverviewRow`）。
+ * 每行只打一个上游请求；`error` 为该行自己的读取失败原因。
+ */
+export type GrowthOverviewRow = {
+  account_id: string
+  name: string
+  provider: string
+  region: string
+  claimed: number
+  claimable: number
+  total: number
+  error?: string
+}
+
+export function fetchGrowthOverview(signal?: AbortSignal) {
+  return api<{ rows?: GrowthOverviewRow[] }>('/api/growth/overview', { signal })
+}
+
 export function fetchGrowthStatus(accountId: string, signal?: AbortSignal) {
   return api<GrowthStatus>(`/api/accounts/${encodeURIComponent(accountId)}/growth`, { signal })
 }

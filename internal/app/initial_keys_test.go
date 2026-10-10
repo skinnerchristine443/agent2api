@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -39,7 +40,10 @@ func TestDeliverInitialSecretNonTTYDoesNotLogSecret(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if perm := info.Mode().Perm(); perm != 0o600 {
-		t.Fatalf("密钥文件权限 = %o，期望 0600", perm)
+	// Windows 无 POSIX 权限位：chmod 是 no-op，Perm() 恒为 0666。
+	if runtime.GOOS != "windows" {
+		if perm := info.Mode().Perm(); perm != 0o600 {
+			t.Fatalf("密钥文件权限 = %o，期望 0600", perm)
+		}
 	}
 }

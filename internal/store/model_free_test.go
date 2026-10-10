@@ -11,6 +11,7 @@ import (
 func TestAccountModelFreeRoundTripAndReplace(t *testing.T) {
 	ctx := context.Background()
 	s, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer s.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

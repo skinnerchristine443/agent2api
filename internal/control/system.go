@@ -33,6 +33,9 @@ type SystemSettingsPatch struct {
 	WorkBuddyCheckinTime         *string                           `json:"workbuddy_checkin_time"`
 	CheckinTimes                 map[string]string                 `json:"checkin_times"`
 	CheckinWindows               map[string]accounts.CheckinWindow `json:"checkin_windows"`
+	// AccountDefaults 是「渠道 × 区域」级账号默认的局部覆盖：键为
+	// `provider.region`，值为该组合的完整默认（缺省组合保持已存值）。
+	AccountDefaults map[string]accounts.AccountDefaults `json:"account_defaults"`
 }
 type SystemSettings struct {
 	CrossProviderModelPool       bool                              `json:"cross_provider_model_pool"`
@@ -45,8 +48,10 @@ type SystemSettings struct {
 	WorkBuddyCheckinTime         string                            `json:"workbuddy_checkin_time"`
 	CheckinTimes                 map[string]string                 `json:"checkin_times"`
 	CheckinWindows               map[string]accounts.CheckinWindow `json:"checkin_windows"`
-	Timezone                     string                            `json:"timezone"`
-	SessionAffinity              executor.SessionAffinityStats     `json:"session_affinity"`
+	// AccountDefaults 键为 `provider.region`，覆盖全部已注册的渠道 × 区域组合。
+	AccountDefaults map[string]accounts.AccountDefaults `json:"account_defaults"`
+	Timezone        string                              `json:"timezone"`
+	SessionAffinity executor.SessionAffinityStats       `json:"session_affinity"`
 }
 
 func (h *System) Current(ctx context.Context) SystemSettings {
@@ -68,7 +73,19 @@ func (h *System) Current(ctx context.Context) SystemSettings {
 		WorkBuddyCheckinTime:    checkin,
 		CheckinTimes:            map[string]string{},
 		CheckinWindows:          map[string]accounts.CheckinWindow{},
+		AccountDefaults:         map[string]accounts.AccountDefaults{},
 		Timezone:                time.Now().Format("MST -07:00"),
+	}
+	// 渠道级账号默认：按注册表枚举「渠道 × 区域」，逐个解析（缺省回落到内置默认）。
+	for _, descriptor := range providers.List() {
+		for _, region := range descriptor.Regions {
+			combo := descriptor.ID + "." + region.ID
+			defaults, err := accounts.AccountDefaultsFor(ctx, h.Settings, descriptor.ID, region.ID)
+			if err != nil {
+				continue
+			}
+			settings.AccountDefaults[combo] = defaults
+		}
 	}
 	for _, descriptor := range providers.List() {
 		if descriptor.SupportsCheckin() && h.Settings != nil {
@@ -100,7 +117,7 @@ func (h *System) Current(ctx context.Context) SystemSettings {
 }
 
 func (h *System) Patch(ctx context.Context, input SystemSettingsPatch) error {
-	if input.CrossProviderModelPool == nil && input.CheckinDisabledAccounts == nil && input.RoutingStrategy == nil && input.RatePreference == nil && input.ExpiryWindowSeconds == nil && input.SecondaryExpiryWindowSeconds == nil && input.ProxyURL == nil && input.WorkBuddyCheckinTime == nil && len(input.CheckinTimes) == 0 && len(input.CheckinWindows) == 0 {
+	if input.CrossProviderModelPool == nil && input.CheckinDisabledAccounts == nil && input.RoutingStrategy == nil && input.RatePreference == nil && input.ExpiryWindowSeconds == nil && input.SecondaryExpiryWindowSeconds == nil && input.ProxyURL == nil && input.WorkBuddyCheckinTime == nil && len(input.CheckinTimes) == 0 && len(input.CheckinWindows) == 0 && len(input.AccountDefaults) == 0 {
 		return operationError("invalid_request", "a system setting is required")
 	}
 	if input.ExpiryWindowSeconds != nil && *input.ExpiryWindowSeconds < 0 {
@@ -256,5 +273,39 @@ func (h *System) Patch(ctx context.Context, input SystemSettingsPatch) error {
 			return operationError("system_settings_save_failed", err.Error())
 		}
 	}
+	// 渠道级账号默认：键为 `provider.region`，逐组合校验并落库。
+	for combo, defaults := range input.AccountDefaults {
+		providerID, regionID, ok := splitProviderRegion(combo)
+		if !ok {
+			return operationError("invalid_request", "account_defaults key must be provider.region")
+		}
+		if _, _, err := providers.Resolve(providerID, regionID); err != nil {
+			return operationError("provider_unsupported", err.Error())
+		}
+		normalized, err := accounts.NormalizeAccountDefaults(defaults)
+		if err != nil {
+			return operationError("invalid_account_defaults", err.Error())
+		}
+		if err := h.Settings.SetSecret(ctx, accounts.AccountDefaultsSecret(providerID, regionID), accounts.EncodeAccountDefaults(normalized)); err != nil {
+			return operationError("system_settings_save_failed", err.Error())
+		}
+	}
+	// 渠道默认保存后，把新值物化到该渠道所有账号（运行时按账号读取）。
+	if len(input.AccountDefaults) > 0 && h.Accounts != nil {
+		if _, err := h.Accounts.ReconcileAccountDefaults(ctx); err != nil {
+			return operationError("account_defaults_apply_failed", err.Error())
+		}
+	}
 	return nil
+}
+
+// splitProviderRegion 拆分 `provider.region` 组合键。region 允许含点号之外
+// 的字符，因此只按第一个点切分。
+func splitProviderRegion(combo string) (string, string, bool) {
+	combo = strings.TrimSpace(combo)
+	index := strings.IndexByte(combo, '.')
+	if index <= 0 || index >= len(combo)-1 {
+		return "", "", false
+	}
+	return combo[:index], combo[index+1:], true
 }

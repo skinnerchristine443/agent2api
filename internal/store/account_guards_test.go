@@ -12,6 +12,7 @@ import (
 func TestAccountGuardsRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	s, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer s.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,6 +97,7 @@ func TestAccountGuardsRoundTrip(t *testing.T) {
 func TestAccountDailyUsageAggregatesSinceBoundary(t *testing.T) {
 	ctx := context.Background()
 	s, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer s.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -23,6 +23,7 @@ func TestConsoleHandlerSmokeCoverage(t *testing.T) {
 		Home:    t.TempDir(),
 		DataDir: t.TempDir(),
 	})
+	defer srv.Close()
 	call := func(method, path, body string) *httptest.ResponseRecorder {
 		var reader io.Reader
 		if body != "" {

@@ -622,6 +622,11 @@ type Pool struct {
 	// 一个 minPickGap 窗口内，只要存在新鲜备选，第二次挑选就
 	// 不得堆叠到同一账号上。与游标一样，是进程内的。
 	lastPickedAt map[string]time.Time
+	// pickOrder 是每账号的单调挑选序号，供"全近期"兜底按最久未挑轮询。
+	// 用序号而非时间戳：粗粒度时钟下同刻挑选会打平，兜底会恒选同一账号。
+	pickOrder map[string]int64
+	// pickSeq 是 pickOrder 的全局递增计数。
+	pickSeq int64
 	// exploreInterval 限定每个 (provider, model) 的免费状态
 	// 探索频率：当已知免费的 tier 独占某路由、费率未知
 	// 的账号被排除在外时，每个间隔有一次挑选被路由到
@@ -864,7 +869,7 @@ func (p *Pool) PickRoute(q RouteQuery) (Item, bool) {
 	// 候选都在窗口内时，使用最久未挑选的那个。
 	pickScope, ok := spreadCandidates(available, p.lastPickedAt, now)
 	if !ok {
-		picked := leastRecentlyPicked(available, p.lastPickedAt)
+		picked := leastRecentlyPicked(available, p.pickOrder, p.lastPicked[key])
 		p.notePicked(picked.ID, now)
 		p.lastPicked[key] = picked.ID
 		p.lastRegion[key] = itemRegion(picked)
@@ -1008,16 +1013,43 @@ func spreadCandidates(available []Item, pickedAt map[string]time.Time, now time.
 // 平局时保留 ID 顺序中的第一个；候选已按 ID 排序，因此
 // 结果是确定性的。它是全近期兜底：每个备选
 // 都刚被用过，因此最久未使用者中签。
-func leastRecentlyPicked(available []Item, pickedAt map[string]time.Time) Item {
+// leastRecentlyPicked 在候选都"刚被挑过"时兜底挑一个。以单调递增的挑选序号
+// （pickOrder）为准取最久未挑者——不用墙钟时间戳，因为在时钟粒度较粗的平台上
+// 同一刻的多次挑选会打平，导致兜底恒选 available[0]，把一阵突发请求全堆到
+// 一个账号上。序号缺失（从未挑过）视为最旧。
+func leastRecentlyPicked(available []Item, order map[string]int64, lastID string) Item {
 	best := available[0]
-	bestAt := pickedAt[best.ID]
+	bestOrder := pickOrderOf(order, best.ID)
 	for _, item := range available[1:] {
-		if at := pickedAt[item.ID]; at.Before(bestAt) {
+		if o := pickOrderOf(order, item.ID); o < bestOrder {
 			best = item
-			bestAt = at
+			bestOrder = o
+		}
+	}
+	// 序号打平（理论上仅"从未挑过"的多个账号）时，从 lastID 之后取一个，保持轮询。
+	if lastID != "" {
+		tied := make([]Item, 0, len(available))
+		for _, item := range available {
+			if pickOrderOf(order, item.ID) == bestOrder {
+				tied = append(tied, item)
+			}
+		}
+		if len(tied) > 1 {
+			return tied[successorIndex(tied, lastID)]
 		}
 	}
 	return best
+}
+
+// pickOrderOf 返回某账号的挑选序号；缺失（从未挑过）按 -1（最旧）处理。
+func pickOrderOf(order map[string]int64, id string) int64 {
+	if order == nil {
+		return -1
+	}
+	if value, ok := order[id]; ok {
+		return value
+	}
+	return -1
 }
 
 // notePicked 为分散守卫打戳一次选择。每条选择路径
@@ -1028,6 +1060,11 @@ func (p *Pool) notePicked(id string, now time.Time) {
 	if id == "" {
 		return
 	}
+	if p.pickOrder == nil {
+		p.pickOrder = map[string]int64{}
+	}
+	p.pickSeq++
+	p.pickOrder[id] = p.pickSeq
 	if p.lastPickedAt == nil {
 		p.lastPickedAt = make(map[string]time.Time)
 	}

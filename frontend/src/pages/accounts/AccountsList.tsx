@@ -55,6 +55,8 @@ export function AccountsList({ rows, sort, wiring }: Props) {
         <span />
         <span>{t('accountCount')}</span>
         <span>{t('runtimeState')}</span>
+        <span>{t('authentication')}</span>
+        <span>{t('priority')}</span>
         <span className="col-sw-models">{t('modelRequests')}</span>
         <span className="col-sw-checkin">{t('acctColAutoCheckin')}</span>
         <span>{t('acctColCheckinResult')}</span>
@@ -62,6 +64,7 @@ export function AccountsList({ rows, sort, wiring }: Props) {
         <span>{t('quota')}</span>
         <span>{t('recentError')}</span>
         <span>{t('refreshAccount')}</span>
+        <span>{t('more')}</span>
         <span>{t('acctColEnabled')}</span>
       </div>
 

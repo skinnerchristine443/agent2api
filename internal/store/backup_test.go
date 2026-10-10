@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ func TestStoreBackupCreatesConsistentSQLiteSnapshot(t *testing.T) {
 	ctx := context.Background()
 	root := t.TempDir()
 	store, err := OpenStore(filepath.Join(root, "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +45,9 @@ func TestStoreBackupCreatesConsistentSQLiteSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0o600 {
+	// Windows 无法表达 POSIX 权限位：chmod 是 no-op，Mode().Perm() 恒为 0666。
+	// 0600 的加固只在类 Unix 上可断言。
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Fatalf("backup mode = %o, want 600", info.Mode().Perm())
 	}
 
@@ -86,6 +90,7 @@ func TestPublishedMigrationsKeepOrderedFilenameAndSQLDigest(t *testing.T) {
 		t.Fatalf("migration count = %d, want %d", len(sqliteMigrations), len(want))
 	}
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,6 +137,7 @@ func TestStoreBackupPrunesOlderSnapshots(t *testing.T) {
 	ctx := context.Background()
 	root := t.TempDir()
 	store, err := OpenStore(filepath.Join(root, "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,6 +172,7 @@ func TestStoreBackupPrunesOlderSnapshots(t *testing.T) {
 func TestStoreRecordsImmutableMigrationChecksums(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,6 +223,7 @@ func TestStoreRecordsImmutableMigrationChecksums(t *testing.T) {
 func TestStoreRejectsChangedAppliedMigration(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "agent2api.db")
 	store, err := OpenStore(dbPath)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,6 +263,7 @@ func TestBaselineAcceptsLegacyInitialSchemaChecksum(t *testing.T) {
 func TestStoreOpensDatabaseWithLegacyInitialSchemaChecksum(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "agent2api.db")
 	store, err := OpenStore(dbPath)
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,6 +281,7 @@ func TestStoreOpensDatabaseWithLegacyInitialSchemaChecksum(t *testing.T) {
 		t.Fatal(err)
 	}
 	reopened, err := OpenStore(dbPath)
+	defer reopened.Close()
 	if err != nil {
 		t.Fatalf("database created by the old chain must reopen: %v", err)
 	}
@@ -332,6 +342,7 @@ func TestStoreOpensDatabaseMigratedByOldChain(t *testing.T) {
 	}
 
 	store, err := OpenStore(dbPath)
+	defer store.Close()
 	if err != nil {
 		t.Fatalf("database migrated by the old chain must boot: %v", err)
 	}

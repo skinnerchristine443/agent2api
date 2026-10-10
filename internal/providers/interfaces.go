@@ -254,6 +254,9 @@ type Adapter struct {
 	// Growth 是可选的成长中心能力。对于没有成长活动中心的
 	// provider 均为 nil。
 	Growth AccountGrowthRunner
+	// GrowthSummary 是可选的轻量成长计数（跨账号总览用，只打任务清单）。
+	// 为 nil 时总览跳过该渠道的账号。
+	GrowthSummary AccountGrowthSummarizer
 	// StreamFormat 声明 ChatStream 返回的 SSE 方言（见
 	// StreamFormat* 常量）。为空表示 chat-completions 增量。
 	StreamFormat string

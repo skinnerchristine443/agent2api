@@ -85,9 +85,26 @@ func (s *fakeStore) Create(_ context.Context, input accounts.CreateAccount) (acc
 	if strings.TrimSpace(input.Name) == "" {
 		return accounts.Account{}, errors.New("account name required")
 	}
-	account := accounts.Account{ID: "acc-1", Name: input.Name, Provider: input.Provider, ProviderRegion: input.Region, Enabled: input.Enabled}
+	account := accounts.Account{
+		ID: "acc-1", Name: input.Name, Provider: input.Provider, ProviderRegion: input.Region, Enabled: input.Enabled,
+		// 真实 store 会把 7 个运行参数（渠道默认已由 control 填好）落进行。
+		MaxInFlight: input.MaxInFlight, Priority: input.Priority,
+		ProxyURL:       input.ProxyURL,
+		ReserveCredits: int64Value(input.ReserveCredits), DailyTokenLimit: int64Value(input.DailyTokenLimit),
+		DailyCreditLimit: int64Value(input.DailyCreditLimit), DailyModelTokenLimit: int64Value(input.DailyModelTokenLimit),
+	}
+	if input.DropSystemPrompt != nil {
+		account.DropSystemPrompt = *input.DropSystemPrompt
+	}
 	s.accounts[account.ID] = account
 	return account, nil
+}
+
+func int64Value(v *int64) int64 {
+	if v == nil {
+		return 0
+	}
+	return *v
 }
 func (s *fakeStore) Get(_ context.Context, id string) (accounts.Account, error) {
 	s.log.add("store.Get")
@@ -125,6 +142,31 @@ func (s *fakeStore) Update(_ context.Context, id string, input accounts.UpdateAc
 	}
 	if input.Enabled != nil {
 		account.Enabled = *input.Enabled
+	}
+	// 运行参数（真实 store 会落这些列；渠道默认物化依赖它们）。
+	if input.MaxInFlight != nil {
+		account.MaxInFlight = *input.MaxInFlight
+	}
+	if input.Priority != nil {
+		account.Priority = *input.Priority
+	}
+	if input.DropSystemPrompt != nil {
+		account.DropSystemPrompt = *input.DropSystemPrompt
+	}
+	if input.ProxyURL != nil {
+		account.ProxyURL = *input.ProxyURL
+	}
+	if input.ReserveCredits != nil {
+		account.ReserveCredits = *input.ReserveCredits
+	}
+	if input.DailyTokenLimit != nil {
+		account.DailyTokenLimit = *input.DailyTokenLimit
+	}
+	if input.DailyCreditLimit != nil {
+		account.DailyCreditLimit = *input.DailyCreditLimit
+	}
+	if input.DailyModelTokenLimit != nil {
+		account.DailyModelTokenLimit = *input.DailyModelTokenLimit
 	}
 	s.accounts[id] = account
 	return nil

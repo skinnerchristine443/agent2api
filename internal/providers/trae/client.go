@@ -88,6 +88,8 @@ func NewClient(store Store) *Client {
 		store: store,
 		http: &http.Client{
 			Timeout: 120 * time.Second,
+			// 默认 transport 用连接池已调好的共享实例（见 workbuddy 同处注释）。
+			Transport: proxyutil.SharedInheritTransport(),
 			CheckRedirect: func(*http.Request, []*http.Request) error {
 				return http.ErrUseLastResponse
 			},

@@ -330,6 +330,8 @@ func (manager *Manager) RunMaintenanceLoop(stop <-chan struct{}) {
 func (manager *Manager) runMaintenanceTick(ctx context.Context, now time.Time, lastKeepaliveDay *string) {
 	if !manager.maintenanceActive() {
 		manager.runScheduledCheckins(ctx, now)
+		// 冷账号补探：开机时全部账号都没有健康判定，只会主动探测补齐。
+		manager.ProbeColdAccounts(ctx)
 		day := now.Format("2006-01-02")
 		if now.Hour() >= 22 && *lastKeepaliveDay != day {
 			keepaliveCtx, stopKeepalive := context.WithTimeout(ctx, 2*time.Minute)
@@ -340,4 +342,39 @@ func (manager *Manager) runMaintenanceTick(ctx context.Context, now time.Time, l
 	}
 	manager.sampleResources()
 	manager.evaluateQuotaAlerts(ctx)
+}
+
+// coldProbeBatch 是单次维护 tick 最多补探的账号数。
+//
+// 账号启动只登记池项，不做探测；未探测过的池项 Ready/Hot 都是 nil，
+// 视图层对两者的默认取值方向相反（Ready 取 nil ⇒ 判就绪，Hot 取 nil ⇒
+// 判非热）⇒ 界面表现为「就绪但非热就绪」，配额与模型目录也是空的，
+// 且没有任何机制会自己把它探回来。开机时全部账号都处于这个状态，
+// 一次性全探会形成上游突发，因此每次只补一小批，由 30 秒一拍的
+// 维护循环自然摊平。
+const coldProbeBatch = 4
+
+// ProbeColdAccounts 为「尚无健康判定」的账号补一次探测，返回本次探测个数。
+// 已有判定（无论成败）的账号不在此列——那些交给显式刷新，避免对已知
+// 故障账号反复打扰上游。
+func (manager *Manager) ProbeColdAccounts(ctx context.Context) int {
+	if manager == nil || manager.pool == nil {
+		return 0
+	}
+	probed := 0
+	for _, item := range manager.pool.Items() {
+		if probed >= coldProbeBatch || ctx.Err() != nil {
+			break
+		}
+		if item.Ready != nil {
+			continue
+		}
+		probeCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		if err := manager.refreshOne(probeCtx, item, false); err != nil {
+			log.Printf("cold probe account=%s: %v", item.ID, err)
+		}
+		cancel()
+		probed++
+	}
+	return probed
 }

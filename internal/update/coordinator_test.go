@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -176,10 +177,10 @@ func TestRollbackDrivesBackupApplyAndMonitor(t *testing.T) {
 		t.Fatalf("受理帧 = %d", rec.Code)
 	}
 	job := waitJob(t, coord, func(job *Job) bool { return job.State == "succeeded" })
-	if job.TargetVersion != allowedRollback || job.BackupPath != "/data/backups/snap.db" {
+	if job.TargetVersion != allowedRollback || job.BackupPath != filepath.Join("/data/backups", "snap.db") {
 		t.Fatalf("job = %+v", job)
 	}
-	if agent.applied == nil || agent.applied.TargetVersion != allowedRollback || agent.applied.BackupPath != "/data/backups/snap.db" {
+	if agent.applied == nil || agent.applied.TargetVersion != allowedRollback || agent.applied.BackupPath != filepath.Join("/data/backups", "snap.db") {
 		t.Fatalf("apply 请求 = %+v", agent.applied)
 	}
 	if !coord.Maintenance.Load() {
@@ -289,7 +290,7 @@ func TestApplyPreparedHappyPath(t *testing.T) {
 	if !agent.called("apply_prepared") {
 		t.Fatal("必须调用 ApplyPrepared")
 	}
-	if job.AgentJobID != "agent-apply-9" || job.BackupPath != "/data/backups/snap.db" {
+	if job.AgentJobID != "agent-apply-9" || job.BackupPath != filepath.Join("/data/backups", "snap.db") {
 		t.Fatalf("job = %+v", job)
 	}
 }

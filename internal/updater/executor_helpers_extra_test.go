@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -39,8 +40,10 @@ func TestMountIdentityAndDockerMountArg(t *testing.T) {
 	}
 
 	bind := dataMount{Type: "bind", Source: "/srv/agent2api/./data/../data"}
-	if got := mountIdentity(bind); got != "bind:/srv/agent2api/data" {
-		t.Fatalf("identity=%q（bind 必须 Clean 后比较）", got)
+	// filepath.Clean 按平台分隔符输出：Windows 得到反斜杠。用 Clean 的期望值
+	// 比较，使断言在两种平台都成立。
+	if want := "bind:" + filepath.Clean(bind.Source); mountIdentity(bind) != want {
+		t.Fatalf("identity=%q, want %q（bind 必须 Clean 后比较）", mountIdentity(bind), want)
 	}
 	if got := dockerMountArg(bind); got != "/srv/agent2api/./data/../data:/data" {
 		t.Fatalf("arg=%q（bind 参数必须原样保留）", got)
@@ -137,8 +140,11 @@ func TestReadAndWriteEnvFileAtomic(t *testing.T) {
 	}
 
 	data, mode, err := readEnvFile(path)
-	if err != nil || string(data) != "A=1\n" || mode.Perm() != 0o640 {
+	if err != nil || string(data) != "A=1\n" {
 		t.Fatalf("read=(%q, %v, %v)", data, mode, err)
+	}
+	if runtime.GOOS != "windows" && mode.Perm() != 0o640 {
+		t.Fatalf("read mode = %v, want 0640", mode.Perm())
 	}
 	if _, _, err := readEnvFile(filepath.Join(dir, "missing")); err == nil {
 		t.Fatal("缺失文件必须报错")
@@ -148,8 +154,11 @@ func TestReadAndWriteEnvFileAtomic(t *testing.T) {
 		t.Fatal(err)
 	}
 	data, mode, err = readEnvFile(path)
-	if err != nil || string(data) != "NEW=1\n" || mode.Perm() != 0o600 {
-		t.Fatalf("mode=0 应落 0600：(%q, %v, %v)", data, mode, err)
+	if err != nil || string(data) != "NEW=1\n" {
+		t.Fatalf("mode=0 写入：(%q, %v, %v)", data, mode, err)
+	}
+	if runtime.GOOS != "windows" && mode.Perm() != 0o600 {
+		t.Fatalf("mode=0 应落 0600，得到 %v", mode.Perm())
 	}
 
 	if err := writeEnvFileAtomic(filepath.Join(dir, "nodir", ".env"), 0o600, []byte("x")); err == nil {

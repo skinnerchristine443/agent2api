@@ -1,46 +1,23 @@
-import { CaretRight } from '@phosphor-icons/react'
-import { Input, NumberField } from '@heroui/react'
+import { Input } from '@heroui/react'
 
-import { CompactSwitch } from '@/components/ui/CompactSwitch'
 import { FormRow } from '@/components/ui/FormRow'
 import type { Translate } from '@/i18n/messages'
 
 type Props = {
   name: string
   onNameChange: (value: string) => void
-  maxInFlight: number
-  onMaxInFlightChange: (value: number) => void
-  priority: number
-  onPriorityChange: (value: number) => void
-  proxyUrl: string
-  onProxyUrlChange: (value: string) => void
-  dropSystemPrompt: boolean
-  onDropSystemPromptChange: (value: boolean) => void
-  showDropSystem: boolean
   locked: boolean
-  advancedOpen: boolean
-  onToggleAdvanced: () => void
   t: Translate
 }
 
-/** 添加向导的账号设置（名称 + 高级选项；登录前锁定，创建后不可改）。 */
-export function AddAccountSettings({
-  name,
-  onNameChange,
-  maxInFlight,
-  onMaxInFlightChange,
-  priority,
-  onPriorityChange,
-  proxyUrl,
-  onProxyUrlChange,
-  dropSystemPrompt,
-  onDropSystemPromptChange,
-  showDropSystem,
-  locked,
-  advancedOpen,
-  onToggleAdvanced,
-  t,
-}: Props) {
+/**
+ * 添加向导的账号设置：只留账号名。
+ *
+ * 运行参数（最大并发 / 优先级 / 代理 / 丢弃系统提示词 / 四道日限额）已迁到
+ * 「设置 › 账号默认（按渠道）」，新账号一律取渠道默认，因此这里不再逐账号询问
+ * （设计决策 2026-10-10）。
+ */
+export function AddAccountSettings({ name, onNameChange, locked, t }: Props) {
   return (
     <div className="mt-4 space-y-3">
       <FormRow label={t('accountName')}>
@@ -53,76 +30,6 @@ export function AddAccountSettings({
           autoFocus
         />
       </FormRow>
-      <button
-        type="button"
-        onClick={onToggleAdvanced}
-        aria-expanded={advancedOpen}
-        className="inline-flex items-center gap-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
-      >
-        <CaretRight size={12} className={`transition-transform duration-200 ${advancedOpen ? 'rotate-90' : ''}`} />
-        {t('wizardAdvanced')}
-      </button>
-      {advancedOpen ? (
-        <div className="space-y-3 rounded-lg border border-separator px-3.5 py-3.5">
-          <FormRow label={t('maxInflight')} hint={t('maxInflightHint')}>
-            <NumberField
-              value={maxInFlight}
-              onChange={(value) => onMaxInFlightChange(value ?? 4)}
-              minValue={1}
-              maxValue={32}
-              isDisabled={locked}
-              isRequired
-              aria-label={t('maxInflight')}
-            >
-              <NumberField.Group>
-                <NumberField.DecrementButton />
-                <NumberField.Input />
-                <NumberField.IncrementButton />
-              </NumberField.Group>
-            </NumberField>
-          </FormRow>
-          <FormRow label={t('priority')} hint={t('priorityHint')}>
-            <NumberField
-              value={priority}
-              onChange={(value) => onPriorityChange(value ?? 50)}
-              minValue={1}
-              maxValue={100}
-              isDisabled={locked}
-              isRequired
-              aria-label={t('priority')}
-            >
-              <NumberField.Group>
-                <NumberField.DecrementButton />
-                <NumberField.Input />
-                <NumberField.IncrementButton />
-              </NumberField.Group>
-            </NumberField>
-          </FormRow>
-          <FormRow label={t('proxyUrl')} hint={t('proxyUrlHint')}>
-            <Input
-              value={proxyUrl}
-              onChange={(event) => onProxyUrlChange(event.target.value)}
-              placeholder={t('proxyUrlPlaceholder')}
-              aria-label={t('proxyUrl')}
-              disabled={locked}
-            />
-          </FormRow>
-          {showDropSystem ? (
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-muted">{t('dropSystemPrompt')}</div>
-                <p className="mt-0.5 text-xs leading-5 text-muted">{t('dropSystemPromptCreateHint')}</p>
-              </div>
-              <CompactSwitch
-                isSelected={dropSystemPrompt}
-                isDisabled={locked}
-                ariaLabel={t('dropSystemPrompt')}
-                onChange={onDropSystemPromptChange}
-              />
-            </div>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   )
 }

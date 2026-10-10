@@ -12,9 +12,16 @@ const storedCheckinDevice = "1111111111111111"
 
 func seedCheckinCredentialWithDevice(t *testing.T, store *memStore) {
 	t.Helper()
+	seedCheckinCredentialWithRawDevice(t, store, storedCheckinDevice)
+}
+
+// seedCheckinCredentialWithRawDevice 存储一个带指定设备号的签到凭据，
+// 供「存量异常号归一」类用例构造现场。
+func seedCheckinCredentialWithRawDevice(t *testing.T, store *memStore, deviceID string) {
+	t.Helper()
 	payload, err := json.Marshal(Credential{
 		AccessToken: "at", RefreshToken: "rt", ExpiresAt: 4102444800,
-		Domain: DomainCN, UID: "u1", DeviceID: storedCheckinDevice,
+		Domain: DomainCN, UID: "u1", DeviceID: deviceID,
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -12,6 +12,7 @@ import (
 func TestUsageStatsRollupByDayModelAndAccount(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,6 +99,7 @@ func TestUsageStatsRollupByDayModelAndAccount(t *testing.T) {
 func TestUsageStatsEmptyAndDefaults(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

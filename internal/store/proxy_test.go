@@ -38,6 +38,7 @@ func TestValidateAccountProxy(t *testing.T) {
 func TestStoreAcceptsSOCKSForEveryProvider(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,6 +58,7 @@ func TestStoreAcceptsSOCKSForEveryProvider(t *testing.T) {
 func TestStoreUpdateKeepsOriginalOnRejectedProxy(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,6 +86,7 @@ func TestStoreUpdateKeepsOriginalOnRejectedProxy(t *testing.T) {
 func TestSetSecretOrEmptyPersistsClearedValue(t *testing.T) {
 	ctx := context.Background()
 	store, err := OpenStore(filepath.Join(t.TempDir(), "agent2api.db"))
+	defer store.Close()
 	if err != nil {
 		t.Fatal(err)
 	}

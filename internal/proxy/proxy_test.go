@@ -280,3 +280,28 @@ func TestSOCKSDialHonorsContextCancellation(t *testing.T) {
 		t.Fatal("dial with a cancelled context unexpectedly succeeded")
 	}
 }
+
+// 共享的「无代理」传输必须把连接池调到网关规模，且始终是同一个实例。
+// 这是「首 token 变慢」类问题的一处根因护栏：默认 http.DefaultTransport 的
+// MaxIdleConnsPerHost 只有 2，并发流会反复重建连接并重跑 TLS 握手。
+func TestSharedInheritTransportIsPooledAndShared(t *testing.T) {
+	first := SharedInheritTransport()
+	if first == nil {
+		t.Fatal("SharedInheritTransport returned nil")
+	}
+	if first.MaxIdleConnsPerHost != maxIdleConnsPerHost {
+		t.Fatalf("MaxIdleConnsPerHost=%d，期望 %d", first.MaxIdleConnsPerHost, maxIdleConnsPerHost)
+	}
+	if first.MaxIdleConns != maxIdleConns {
+		t.Fatalf("MaxIdleConns=%d，期望 %d", first.MaxIdleConns, maxIdleConns)
+	}
+	if first.ResponseHeaderTimeout != responseHeaderTimeout {
+		t.Fatalf("ResponseHeaderTimeout=%v，期望 %v", first.ResponseHeaderTimeout, responseHeaderTimeout)
+	}
+	if first.Proxy == nil {
+		t.Fatal("共享传输必须保留 ProxyFromEnvironment（否则会静默忽略 HTTP(S)_PROXY）")
+	}
+	if again := SharedInheritTransport(); again != first {
+		t.Fatal("SharedInheritTransport 每次返回新实例：连接池无法跨请求复用")
+	}
+}

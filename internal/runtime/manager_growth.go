@@ -21,6 +21,24 @@ func (manager *Manager) GrowthStatus(ctx context.Context, accountID string) (pro
 	return adapter.Growth.GrowthStatus(ctx, accountID)
 }
 
+// GrowthTaskSummary 读取一个账号的轻量成长计数：只打任务清单一个上游请求，
+// 供跨账号总览使用。与 GrowthStatus 一样严格只读；未接线轻量汇总的渠道
+// 显式返回 ErrUnsupported，而不是回一份看起来像成功的空计数。
+func (manager *Manager) GrowthTaskSummary(ctx context.Context, accountID string) (providers.GrowthTaskSummary, error) {
+	if manager == nil {
+		return providers.GrowthTaskSummary{}, fmt.Errorf("account manager unavailable")
+	}
+	account, err := manager.store.Get(ctx, accountID)
+	if err != nil {
+		return providers.GrowthTaskSummary{}, err
+	}
+	adapter, registered := manager.providers.Get(account.Provider)
+	if !registered || adapter.GrowthSummary == nil {
+		return providers.GrowthTaskSummary{}, providers.ErrUnsupported
+	}
+	return adapter.GrowthSummary.GrowthTaskSummary(ctx, accountID)
+}
+
 // ClaimGrowthRewards 只执行幂等的成长中心领取，并把结果返回给调用方。没有任何
 // 调度会触发它：唯一的入口就是这次显式调用。
 //

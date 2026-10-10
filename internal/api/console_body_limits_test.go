@@ -21,6 +21,7 @@ func TestConsoleImportBodyLimits(t *testing.T) {
 		Home:    t.TempDir(),
 		DataDir: t.TempDir(),
 	})
+	defer srv.Close()
 
 	post := func(path, body string) *httptest.ResponseRecorder {
 		req := loopbackRequest(http.MethodPost, path, bytes.NewBufferString(body))

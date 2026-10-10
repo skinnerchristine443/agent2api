@@ -1,13 +1,15 @@
 import { AccountCheckinRecordsModal } from '@/components/accounts/AccountCheckinRecordsModal'
 import { AccountModelsModal } from '@/components/accounts/AccountModelsModal'
 import { AddAccountModal } from '@/components/accounts/add-account/AddAccountModal'
-import { EditAccountModal } from '@/components/accounts/EditAccountModal'
-import type { AccountSettingsInput } from '@/components/accounts/useAccountPool'
+import { AccountAuthModal } from '@/components/accounts/AccountAuthModal'
+import type { ProviderDescriptor } from '@/api/overview'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { Translate } from '@/i18n/messages'
 import type { AccountRow } from '@/lib/account'
 
-import type { AccountBusy, AccountPanelKey } from './accountsReducer'
+import type { AccountHandlers } from './accountActions'
+import { authCapabilitiesFor } from './accountPolicy'
+import type { AccountBusy, AccountPanelKey, AccountTransient } from './accountsReducer'
 
 type Props = {
   /** 打开中的模态 → 目标账号 id（null = 关闭）。 */
@@ -17,12 +19,15 @@ type Props = {
   addOpen: boolean
   /** 添加向导预选渠道（批次 9：账号池页签联动）。 */
   addPresetProvider?: string
+  providers: ProviderDescriptor[]
   t: Translate
   onAddOpenChange: (open: boolean) => void
   onAdded: () => void
   onClosePanel: (panel: AccountPanelKey) => void
   onConfirmDelete: (id: string) => void
-  onSaveSettings: (id: string, input: AccountSettingsInput) => Promise<void>
+  /** 认证模态的临时输入 / 结果（按账号）。 */
+  transients: Record<string, AccountTransient>
+  handlers: AccountHandlers
 }
 
 /** 账号池的 5 个模态装配（添加向导 / 编辑 / 模型 / 签到记录 / 删除确认）。 */
@@ -32,19 +37,23 @@ export function AccountsModals({
   busy,
   addOpen,
   addPresetProvider,
+  providers,
   t,
   onAddOpenChange,
   onAdded,
   onClosePanel,
   onConfirmDelete,
-  onSaveSettings,
+  transients,
+  handlers,
 }: Props) {
   const accountOf = (id: string | null) => rows.find((account) => account.id === id) || null
   const confirmAccount = accountOf(panels.confirm)
   const modelsAccount = accountOf(panels.models)
   const checkinAccount = accountOf(panels.checkins)
-  const editAccount = accountOf(panels.edit)
-  const editId = panels.edit
+  const authAccount = accountOf(panels.auth)
+  const authId = panels.auth || ''
+  const authTransient = authId ? transients[authId] || {} : {}
+  const authCapabilities = authAccount ? authCapabilitiesFor(providers, authAccount) : null
 
   return (
     <>
@@ -67,13 +76,21 @@ export function AccountsModals({
         t={t}
         onClose={() => onClosePanel('checkins')}
       />
-      <EditAccountModal
-        key={`edit:${panels.edit ?? 'closed'}`}
-        account={editAccount}
-        busy={Boolean(busy && busy.id === editId && busy.kind === 'settings')}
+      <AccountAuthModal
+        key={`auth:${panels.auth ?? 'closed'}`}
+        account={authAccount}
+        busyKind={busy && busy.id === authId ? busy.kind : ''}
         t={t}
-        onClose={() => onClosePanel('edit')}
-        onSave={(input) => onSaveSettings(editId || '', input)}
+        authUrl={authTransient.authUrl}
+        note={authTransient.note}
+        pat={authTransient.pat || ''}
+        onPatChange={(value) => handlers.onPatChange(authId, value)}
+        onDeviceLogin={authCapabilities?.browser_login !== false ? () => handlers.onDeviceLogin(authId) : undefined}
+        onPatLogin={authCapabilities?.pat_login !== false ? () => handlers.onPat(authId) : undefined}
+        callbackUrl={authTransient.callback || ''}
+        onCallbackChange={(value) => handlers.onCallbackChange(authId, value)}
+        onSubmitCallback={() => handlers.onCallback(authId)}
+        onClose={() => onClosePanel('auth')}
       />
       <ConfirmDialog
         isOpen={Boolean(confirmAccount)}

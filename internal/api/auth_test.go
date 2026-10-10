@@ -70,6 +70,7 @@ func TestManagementRoutesRequireAPIKey(t *testing.T) {
 		ProxyAPIKey: "secret", ConsoleKey: "secret",
 		Home: t.TempDir(),
 	})
+	defer srv.Close()
 	h := srv.Handler()
 
 	for i, path := range []string{
@@ -424,6 +425,7 @@ func TestLegacyDiagnosticRoutesAreRemoved(t *testing.T) {
 		ProxyAPIKey: "secret", ConsoleKey: "secret",
 		Home: t.TempDir(),
 	})
+	defer srv.Close()
 
 	for _, target := range []struct {
 		method string
@@ -453,6 +455,7 @@ func TestSPAFallbackServesIndexForClientRoutes(t *testing.T) {
 		ProxyAPIKey: "secret", ConsoleKey: "secret",
 		Home: t.TempDir(),
 	})
+	defer srv.Close()
 	req := loopbackRequest(http.MethodGet, "/auth", nil)
 	rec := httptest.NewRecorder()
 	srv.Handler().ServeHTTP(rec, req)
@@ -475,6 +478,7 @@ func TestOverviewWithAPIKeyDoesNotLeakWorkerProxyFailureAs200Auth(t *testing.T) 
 		ProxyAPIKey: "secret", ConsoleKey: "secret",
 		Home: t.TempDir(),
 	})
+	defer srv.Close()
 	req := loopbackRequest(http.MethodGet, "/api/overview", nil)
 	req.Header.Set("Authorization", "Bearer secret")
 	rec := httptest.NewRecorder()
@@ -505,6 +509,7 @@ func TestSPAFallbackServesAccounts(t *testing.T) {
 		ProxyAPIKey: "secret", ConsoleKey: "secret",
 		Home: t.TempDir(),
 	})
+	defer srv.Close()
 	req := loopbackRequest(http.MethodGet, "/accounts", nil)
 	rec := httptest.NewRecorder()
 	srv.Handler().ServeHTTP(rec, req)
@@ -520,6 +525,7 @@ func TestSPAFallbackServesLogin(t *testing.T) {
 		ProxyAPIKey: "secret", ConsoleKey: "secret",
 		Home: t.TempDir(),
 	})
+	defer srv.Close()
 	req := loopbackRequest(http.MethodGet, "/login", nil)
 	rec := httptest.NewRecorder()
 	srv.Handler().ServeHTTP(rec, req)
@@ -553,6 +559,7 @@ func TestAccountsAPICreatesAndListsDisabledAccount(t *testing.T) {
 		Home:    t.TempDir(),
 		DataDir: dataDir,
 	})
+	defer srv.Close()
 	body := bytes.NewBufferString(`{"name":"Work","provider":"workbuddy","region":"cn","enabled":false,"max_inflight":5,"drop_system_prompt":false}`)
 	req := loopbackRequest(http.MethodPost, "/api/accounts", body)
 	req.Header.Set("Authorization", "Bearer secret")
@@ -581,7 +588,10 @@ func TestAccountsAPICreatesAndListsDisabledAccount(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
 		t.Fatal(err)
 	}
-	if len(payload.Data) != 1 || payload.Data[0].Name != "Work" || payload.Data[0].Enabled || payload.Data[0].MaxInFlight != 5 || payload.Data[0].DropSystemPrompt {
+	// 运行参数已迁「设置 › 账号默认」：创建载荷里的 max_inflight / drop_system_prompt
+	// 被忽略，账号一律取渠道默认（workbuddy.cn 内置默认 = 4 / true）。
+	if len(payload.Data) != 1 || payload.Data[0].Name != "Work" || payload.Data[0].Enabled ||
+		payload.Data[0].MaxInFlight != 4 || !payload.Data[0].DropSystemPrompt {
 		t.Fatalf("accounts payload = %+v", payload.Data)
 	}
 }
@@ -594,6 +604,7 @@ func TestAccountsAPIUpdatesExportsAndDeletesAccount(t *testing.T) {
 		Home:    t.TempDir(),
 		DataDir: t.TempDir(),
 	})
+	defer srv.Close()
 	importBody := bytes.NewBufferString(`{"format":"trae-oauth-v1","name":"Imported","enabled":false,"credential":{"access_token":"AT","refresh_token":"RT","uid":"U","expires_at":4102444800}}`)
 	req := loopbackRequest(http.MethodPost, "/api/accounts/import", importBody)
 	req.Header.Set("Authorization", "Bearer secret")

@@ -29,17 +29,12 @@ const PROVIDERS_QUERY_KEY = 'account-pool:providers'
 const SETTINGS_QUERY_KEY = 'account-pool:settings'
 
 /** 账号编辑提交载荷（与 EditAccountModal 的 onSave 输入同构）。 */
+/** 账号级可 PATCH 的字段。运行参数（最大并发 / 代理 / 丢弃系统提示词 / 四道日限额）
+ *  已迁到设置、按渠道统一；账号级只余 名称 / 优先级 / 启用 / 签到 / 模型请求。 */
 export type AccountSettingsInput = {
-  name: string
-  max_inflight: number
-  priority: number
-  proxy_url: string
-  drop_system_prompt?: boolean
+  name?: string
+  priority?: number
   model_requests_enabled?: boolean
-  reserve_credits?: number
-  daily_token_limit?: number
-  daily_credit_limit?: number
-  daily_model_token_limit?: number
 }
 
 export type QuotaRefreshOutcome = { failed: Array<{ id: string; message: string }> }

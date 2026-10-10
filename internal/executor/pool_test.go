@@ -285,10 +285,15 @@ func TestAccountCooldownBlocksEveryModel(t *testing.T) {
 
 func TestRepeatedFailuresBackOff(t *testing.T) {
 	p := stubPool("a")
+	// 注入时钟：退避窗口是「now + 递增时长」，用真实墙钟在粗粒度时钟平台上
+	// 会因亚刻度精度不足而两次打平。注入可推进的时钟使断言确定。
+	now := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	p.SetClock(func() time.Time { return now })
 	base := 30 * time.Second
 	p.MarkClassified("a", Classified{Kind: KindRateLimit, Cooldown: base, Failover: true})
 	first, _ := p.ByID("a")
 
+	now = now.Add(time.Second)
 	p.MarkClassified("a", Classified{Kind: KindRateLimit, Cooldown: base, Failover: true})
 	second, _ := p.ByID("a")
 	if !second.DownUntil.After(first.DownUntil) {
@@ -392,20 +397,22 @@ func TestMarkOKScopedToModelLeavesOthers(t *testing.T) {
 // （rate_limit -> auth）必须重启阶梯，而非继续递增。
 func TestBackoffResetsOnKindChange(t *testing.T) {
 	p := stubPool("a")
+	now := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	p.SetClock(func() time.Time { return now })
 	base := 30 * time.Second
 	p.MarkClassified("a", Classified{Kind: KindRateLimit, Cooldown: base, Failover: true})
 	first, _ := p.ByID("a")
 	// 相同基础冷却的不同类别：阶梯重启，因此
 	// 冷却不得超过（且应等于）基础值。
+	now = now.Add(time.Second)
 	p.MarkClassified("a", Classified{Kind: KindAuth, Cooldown: base, Failover: true})
 	second, _ := p.ByID("a")
 	if !second.DownUntil.After(first.DownUntil) {
 		t.Fatalf("expected a fresh cooldown at base duration, first=%v second=%v", first.DownUntil, second.DownUntil)
 	}
-	// 新类别的冷却必须约为 base，而非升级值。为
-	// 两次 MarkClassified 调用之间的时间留出余量。
-	got := time.Until(second.DownUntil)
-	if got > base+5*time.Second {
+	// 新类别的冷却必须约为 base，而非升级值。
+	got := second.DownUntil.Sub(now)
+	if got > base+time.Second {
 		t.Fatalf("kind change must reset backoff, got cooldown %v > base %v", got, base)
 	}
 }

@@ -49,6 +49,13 @@ vi.mock('@/api/growth', () => ({
   }),
   fetchGrowthObservations: vi.fn(async () => ({ data: [] })),
   claimGrowthRewards: vi.fn(async () => ({ outcomes: [] })),
+  // 总览：两行，一好一坏——坏行必须带出原因且不拖垮整表。
+  fetchGrowthOverview: vi.fn(async () => ({
+    rows: [
+      { account_id: 'wb-1', name: 'WB 主号', provider: 'workbuddy', region: 'cn', claimed: 17, claimable: 1, total: 18 },
+      { account_id: 'wb-2', name: 'WB 二号', provider: 'workbuddy', region: 'cn', claimed: 0, claimable: 0, total: 0, error: 'upstream 503' },
+    ],
+  })),
   isGrowthUnavailable: () => false,
   isProviderUnsupported: () => false,
 }))

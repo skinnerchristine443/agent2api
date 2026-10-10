@@ -144,7 +144,7 @@ export function AccountsPage() {
 
   const handlers = createAccountHandlers({
     dispatch,
-    authPanelId: state.authPanelId,
+    authPanelId: state.panels.auth,
     transients: state.transients,
     pool,
     run,
@@ -157,7 +157,6 @@ export function AccountsPage() {
       if (state.busy?.id === id) return state.busy.kind
       return deviceLogin.accountId === id ? 'device' : ''
     },
-    authPanelId: state.authPanelId,
     transients: state.transients,
     providers: pool.providers,
     handlers,
@@ -227,6 +226,7 @@ export function AccountsPage() {
         busy={state.busy}
         addOpen={state.addOpen}
         addPresetProvider={addPreset}
+        providers={pool.providers}
         t={t}
         onAddOpenChange={(open) => dispatch({ type: 'addOpen', open })}
         onAdded={() => void pool.reload()}
@@ -235,7 +235,8 @@ export function AccountsPage() {
           dispatch({ type: 'panel', panel: 'confirm', id: null })
           handlers.onDelete(id)
         }}
-        onSaveSettings={handlers.onSaveSettings}
+        transients={state.transients}
+        handlers={handlers}
       />
 
       {!hasAccounts ? (

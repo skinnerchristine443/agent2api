@@ -5,6 +5,25 @@ import (
 	"strconv"
 )
 
+// HandleGrowthOverview 提供 GET /api/growth/overview：跨账号的任务领取进度总览。
+// 每个账号只读一次任务清单（不跑整套成长聚合），逐账号失败写进该行的 error。
+func (h *Handler) HandleGrowthOverview(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeErr(w, http.StatusMethodNotAllowed, "method_not_allowed", "GET only")
+		return
+	}
+	if h.Control == nil || h.Control.Accounts == nil {
+		writeErr(w, http.StatusServiceUnavailable, "growth_unavailable", "account service unavailable")
+		return
+	}
+	rows, err := h.Control.Accounts.GrowthOverview(r.Context())
+	if err != nil {
+		writeOperationError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"rows": rows})
+}
+
 // HandleAccountGrowth 提供 GET /api/accounts/{id}/growth。它返回某个账号的只读
 // 成长中心聚合数据，且从不改变状态。
 func (h *Handler) HandleAccountGrowth(w http.ResponseWriter, r *http.Request) {

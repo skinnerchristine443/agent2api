@@ -157,6 +157,8 @@ type recordingActivityMaintainer struct {
 	reported      []string
 	streakChecked []string
 	reportErr     error
+	streakErr     error
+	streakDays    int
 }
 
 func (m *recordingActivityMaintainer) DailyCheckin(context.Context, string) (string, error) {
@@ -172,5 +174,66 @@ func (m *recordingActivityMaintainer) ReportActivity(_ context.Context, accountI
 
 func (m *recordingActivityMaintainer) ActivityStreakDays(_ context.Context, accountID string) (int, error) {
 	m.streakChecked = append(m.streakChecked, accountID)
-	return 5, nil
+	return m.streakDays, m.streakErr
+}
+
+// TestActivityReportNoMaintainer 未接入维护器时安全返回 0（不 panic）。
+func TestActivityReportNoMaintainer(t *testing.T) {
+	manager, _ := newActivityTestManager(t)
+	if got := manager.runScheduledActivityReport(context.Background()); got != 0 {
+		t.Fatalf("attempted = %d, want 0 without maintainer", got)
+	}
+}
+
+// TestActivityReportMultipleAccountsStaggered 多账号逐个上报，且每个都回读 streak
+// （覆盖账号间限速分支与 `first` 翻转）。
+func TestActivityReportMultipleAccountsStaggered(t *testing.T) {
+	manager, store := newActivityTestManager(t)
+	seedActivityAccount(t, store, "a", "workbuddy", true)
+	seedActivityAccount(t, store, "b", "workbuddy", true)
+	seedActivityAccount(t, store, "c", "workbuddy", true)
+
+	ops := &recordingActivityMaintainer{streakDays: 3}
+	manager.SetWorkBuddy(ops)
+
+	if got := manager.runScheduledActivityReport(context.Background()); got != 3 {
+		t.Fatalf("attempted = %d, want 3", got)
+	}
+	if len(ops.reported) != 3 || len(ops.streakChecked) != 3 {
+		t.Fatalf("reported=%v streakChecked=%v, want 3 each", ops.reported, ops.streakChecked)
+	}
+}
+
+// TestActivityReportStopsOnContextCancel ctx 取消后立即停止，不再上报剩余账号。
+func TestActivityReportStopsOnContextCancel(t *testing.T) {
+	manager, store := newActivityTestManager(t)
+	seedActivityAccount(t, store, "a", "workbuddy", true)
+	seedActivityAccount(t, store, "b", "workbuddy", true)
+
+	ops := &recordingActivityMaintainer{}
+	manager.SetWorkBuddy(ops)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // 预先取消：循环应立即退出
+	if got := manager.runScheduledActivityReport(ctx); got != 0 {
+		t.Fatalf("attempted = %d, want 0 on canceled ctx", got)
+	}
+	if len(ops.reported) != 0 {
+		t.Fatalf("reported = %v, want none on canceled ctx", ops.reported)
+	}
+}
+
+// TestCheckActivityStreakPaths 覆盖自检的三条分支：回读失败、days=0（静默丢弃）、
+// 正常天数。三者都必须只记日志、不影响主流程。
+func TestCheckActivityStreakPaths(t *testing.T) {
+	manager, _ := newActivityTestManager(t)
+
+	manager.SetWorkBuddy(&recordingActivityMaintainer{streakErr: context.DeadlineExceeded})
+	manager.checkActivityStreak(context.Background(), "acc1") // 回读失败分支
+
+	manager.SetWorkBuddy(&recordingActivityMaintainer{streakDays: 0})
+	manager.checkActivityStreak(context.Background(), "acc2") // days=0 静默丢弃分支
+
+	manager.SetWorkBuddy(&recordingActivityMaintainer{streakDays: 7})
+	manager.checkActivityStreak(context.Background(), "acc3") // 正常分支
 }
